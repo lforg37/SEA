@@ -114,9 +114,6 @@ void swi_handler(void)
 		case GETTIME:
 			do_sys_gettime(args);
 			break;
-		case YIELDTO:
-			do_sys_yieldto(args, lrsvc);
-			break;
 		case YIELD:
 			do_sys_yield(args, lrsvc);
 			break;

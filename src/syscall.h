@@ -20,7 +20,6 @@ typedef enum syscall_type {
 	SETTIME,
 	GETTIME,
 	NOP,
-	YIELDTO,
 	YIELD
 } syscall_type;
 

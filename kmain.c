@@ -12,7 +12,7 @@ int user_process_1()
 	for(;;)
 	{
 		v1++;
-		sys_yieldto(p2);
+		sys_yield();
 	}
 }
 
@@ -22,7 +22,7 @@ int user_process_2()
 	for(;;)
 	{
 		v2-=2;
-		sys_yieldto(p1);
+		sys_yield();
 	}
 }
 
@@ -35,8 +35,9 @@ int kmain( void )
 	p2 = create_process(user_process_2);
 
 	__asm__("cps #0x10");
-
-	sys_yieldto(p1);
+	
+	for(;;)
+		sys_yield();
 
 	sys_reboot();
 	return 0;

@@ -23,24 +23,22 @@
 #define R12 context[12]
 
 typedef uint32_t reg_t;
-
 typedef struct pcb_s {
 	 reg_t context[13];
 	 reg_t lr_user;
 	 reg_t sp;
 	 reg_t cpsr;
-
-	 pcb_s* next_task;
+	 struct pcb_s* next_task;
+	 struct pcb_s* prev_task;
 } pcb_s;
 
 void sys_yield(void);
-void sys_yieldto(pcb_s* dest);
 
 typedef int (func_t)(void);
 
 void sched_init(void);
 
-void do_sys_yieldto(void *args, reg_t lrsvc);
+void do_sys_yield(void *args, reg_t lrsvc);
 
 pcb_s* create_process(func_t entry);
 #endif
