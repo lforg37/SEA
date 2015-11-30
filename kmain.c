@@ -35,10 +35,10 @@ void kmain( void )
 	
 	create_process((func_t *)&user_process_1);
  	create_process((func_t *)&user_process_2);
-    	create_process((func_t *)&user_process_3);
+    create_process((func_t *)&user_process_3);
 	
 	timer_init();
-    	ENABLE_IRQ();
+    ENABLE_IRQ();
 
 	__asm("cps 0x10"); // switch CPU to USER mode
 	

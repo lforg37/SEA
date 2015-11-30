@@ -1,6 +1,5 @@
 #include "sched.h"
 #include "kheap.h"
-#include "hw.h"
 
 #define STACK_SIZE 10240
 
@@ -23,7 +22,7 @@ pcb_s * create_process(func_t* entry)
 	newPcb->lr_user = (int32_t)entry;
 	newPcb->stack = (uint32_t *)kAlloc(STACK_SIZE);
 	newPcb->sp = newPcb->stack + STACK_SIZE/4;
-	newPcb->CPSR_user = 0x200001d0;
+	newPcb->CPSR_user = 0x60000150;
 	newPcb->lr_svc = (int32_t)&start_current_process;
 	
 	pcb_s * tmp = g_current_process->next_process;
@@ -78,7 +77,7 @@ void do_sys_yieldto()
 	
 	g_current_process->lr_svc = g_spArg[14];
 	g_spArg[14] = dest->lr_svc;
-	//g_spArg[14] = (dest->lr_svc == 0x0) ?  dest->lr_user : dest->lr_svc;
+	
 	g_current_process = dest;
 	
 	__asm("cps 0x1F"); 
@@ -95,7 +94,7 @@ void do_sys_exit()
 	do_sys_yieldto();
 
 	int terminateKernel = 0;
-    if (processToDelete->next_process->next_process == processToDelete)//Si on supprime le dernier processus...
+	if (processToDelete->next_process->next_process == processToDelete)//Si on supprime le dernier processus...
 		terminateKernel = 1;
 	
 	processToDelete->next_process->prev_process = processToDelete->prev_process;
@@ -114,9 +113,33 @@ void do_sys_exit()
 void  sched_init()
 {
 	kheap_init();	
-    g_kmain_process.CPSR_user = 0x200001d0;
+	g_kmain_process.CPSR_user = 0x60000150;
 
 	g_current_process = &g_kmain_process;
 	g_current_process->next_process = g_current_process;
 	g_current_process->prev_process = g_current_process;
+}
+
+void __attribute__((naked)) irq_handler(void)
+{
+	__asm("STMFD sp!, {r0-r12, lr}");
+    __asm("MRS r4, spsr");
+    __asm("STMFD sp!, {r4}");
+
+	//selection du prochain processus
+	__asm("mov %0, sp" : "=r"(g_spArg));
+	g_spArg[2] = (uint32_t) elect();
+	
+	//Changement de contexte
+	__asm("cps 0x13");
+	do_sys_yieldto();
+	__asm("cps 0x12");
+	
+	//reearmement du timer
+	set_next_tick_default();
+	ENABLE_TIMER_IRQ();
+
+	__asm("LDMFD sp!, {r4}");
+    __asm("MSR spsr, r4");
+    __asm("LDMFD sp!, {r0-r12, pc}^");	
 }
