@@ -4,11 +4,14 @@
 #define STACK_SIZE 10240
 
 extern uint32_t * g_spArg;
+static scheduler g_current_scheduler;
 
 pcb_s *g_current_process;
 pcb_s g_kmain_process;
 
 static pcb_s *elect();
+static pcb_s *electNextOne();
+static pcb_s *electBestPriority();
 
 void start_current_process()
 {
@@ -36,7 +39,31 @@ pcb_s * create_process(func_t* entry)
 
 pcb_s *elect()
 {
+	switch (g_current_scheduler)
+	{
+		case NEXT_ONE :
+			return electNextOne();
+		case PRIORITY :
+			return electBestPriority();
+		default :
+			return electNextOne();
+	}
+}
+
+
+pcb_s *electNextOne()
+{
 	return g_current_process->next_process;
+}
+
+pcb_s *electBestPriority()
+{
+	return g_current_process->next_process;
+}
+
+void setScheduler(scheduler s)
+{
+	g_current_scheduler = s;
 }
 
 void sys_yield()
@@ -110,9 +137,10 @@ void do_sys_exit()
 		terminate_kernel();
 }
 
-void  sched_init()
+void  sched_init(scheduler s)
 {
 	kheap_init();	
+	setScheduler(s);
 	g_kmain_process.CPSR_user = 0x60000150;
 
 	g_current_process = &g_kmain_process;
