@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include "syscall.h"
+#include "hw.h"
+#include "asm_tools.h"
 
 typedef int (func_t)(void);
 
@@ -31,4 +33,7 @@ void do_sys_yieldto();
 void do_sys_exit();
 
 void sched_init();
+
+void __attribute__((naked)) irq_handler(void);
+
 #endif
