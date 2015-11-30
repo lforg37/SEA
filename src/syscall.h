@@ -19,6 +19,7 @@ typedef enum syscall_type {
 	REBOOT,
 	SETTIME,
 	GETTIME,
+	EXIT,
 	NOP,
 	YIELD
 } syscall_type;

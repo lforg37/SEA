@@ -3,42 +3,31 @@
 #include "sched.h"
 #include "kheap.h"
 
-pcb_s pcb1, pcb2;
-pcb_s *p1, *p2;
-
-int user_process_1()
+int user_process(void)
 {
-	int v1 = 5;
-	for(;;)
+	int v;
+	for( v = 0 ; v < 2 ; v++ )
 	{
-		v1++;
 		sys_yield();
 	}
-}
 
-int user_process_2()
-{
-	int v2 = -12;
-	for(;;)
-	{
-		v2-=2;
-		sys_yield();
-	}
+	return 8;
 }
-
 
 int kmain( void )
 {
 	sched_init();
 
-	p1 = create_process(user_process_1);
-	p2 = create_process(user_process_2);
+	pcb_s* test = create_process(user_process);
 
 	__asm__("cps #0x10");
-	
-	for(;;)
-		sys_yield();
+	uint32_t compteur;
+	for(compteur=0;;compteur++);
 
-	sys_reboot();
+	uint32_t retour;
+	retour = sys_wait(test);
+	retour += 0;
+	PANIC();
+
 	return 0;
 }

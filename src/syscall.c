@@ -101,6 +101,8 @@ void swi_handler(void)
 				[lrsvc]"=r"(lrsvc)
 			);
 
+	uint32_t codeRetour;
+
 	switch(type) {
 		case REBOOT:
 			do_sys_reboot();
@@ -116,6 +118,10 @@ void swi_handler(void)
 			break;
 		case YIELD:
 			do_sys_yield(args, lrsvc);
+			break;
+		case EXIT:
+			codeRetour = *((uint32_t*)args);
+			do_sys_exit(codeRetour);
 			break;
 		default:
 			PANIC();
