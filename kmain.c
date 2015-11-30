@@ -31,7 +31,7 @@ void user_process_3()
 
 void kmain( void )
 {
-	sched_init();
+	sched_init(PRIORITY);
 	
 	create_process((func_t *)&user_process_1);
  	create_process((func_t *)&user_process_2);
