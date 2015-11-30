@@ -1,33 +1,50 @@
 #include "util.h"
 #include "syscall.h"
 #include "sched.h"
-#include "kheap.h"
 
-int user_process(void)
+void user_process_1()
 {
-	int v;
-	for( v = 0 ; v < 2 ; v++ )
+	int v1 = 5;
+	while(1)
+	{
+		v1++;
+	}
+}
+
+void user_process_2()
+{
+	int v2 = -12;
+	while(1)
+	{
+		v2 -= 2;
+	}
+}
+
+void user_process_3() 
+{
+	int v3 = 0;
+	while(1)
+	{
+		v3 += 5;
+	}
+}
+
+void kmain( void )
+{
+	sched_init();
+	
+	create_process((func_t *)&user_process_1);
+ 	create_process((func_t *)&user_process_2);
+    	create_process((func_t *)&user_process_3);
+	
+	timer_init();
+    	ENABLE_IRQ();
+
+	__asm("cps 0x10"); // switch CPU to USER mode
+	
+	// **********************************************************************
+	while(1)
 	{
 		sys_yield();
 	}
-
-	return 8;
-}
-
-int kmain( void )
-{
-	sched_init();
-
-	pcb_s* test = create_process(user_process);
-
-	__asm__("cps #0x10");
-	uint32_t compteur;
-	for(compteur=0;;compteur++);
-
-	uint32_t retour;
-	retour = sys_wait(test);
-	retour += 0;
-	PANIC();
-
-	return 0;
 }

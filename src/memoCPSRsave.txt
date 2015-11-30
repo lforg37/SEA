@@ -1,0 +1,10 @@
+	//__asm("MRS r4, spsr");
+	//__asm("STMFD sp!, {r4}");
+	
+	
+		//__asm("LDMFD sp!, {r0}^");	
+	//__asm("MSR spsr, r0");	
+	
+	
+		//g_current_process->CPSR_user = (uint32_t *)g_spArg[14];
+	//g_spArg[14] = (uint32_t)dest->CPSR_user;
