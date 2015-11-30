@@ -6,6 +6,7 @@
 #define SCHED_H
 
 #include <stdint.h>
+#include "syscall.h"
 
 #define STACK_SIZE 10240
 #define R0 context[0]
@@ -22,23 +23,40 @@
 #define R11 context[11]
 #define R12 context[12]
 
+typedef int (func_t)(void);
+
+typedef enum process_state {
+	RUNNING,
+	READY,
+	WAITING,
+	TERMINATED
+} process_state;
+
 typedef uint32_t reg_t;
 typedef struct pcb_s {
 	 reg_t context[13];
 	 reg_t lr_user;
 	 reg_t sp;
 	 reg_t cpsr;
+	 void* stackZone;
 	 struct pcb_s* next_task;
 	 struct pcb_s* prev_task;
+	 uint32_t termination_code;
+	 func_t* entry;
+	 process_state state;
 } pcb_s;
 
 void sys_yield(void);
+void sys_exit();
+uint32_t sys_wait(pcb_s* waitingfor); 
 
-typedef int (func_t)(void);
 
 void sched_init(void);
 
 void do_sys_yield(void *args, reg_t lrsvc);
+void do_sys_exit(uint32_t code);
+
+void handle_irq();
 
 pcb_s* create_process(func_t entry);
 #endif
