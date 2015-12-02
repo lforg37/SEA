@@ -5,14 +5,63 @@
 
 #define DEV_ADDR_FLAG 0x20000000
 
+static uint32_t mmu_base;
+
 static bool is_init_addr(uint32_t addr)
 {
 	return addr < __kernel_heap_end__ || ((addr & 0xFF000000) == DEV_ADDR_FLAG );
 }
 
+static void start_mmu_c(void)
+{
+	register unsigned int control;
+	/*Desactivation du cache*/
+	__asm__("mcr p15, 0, %[zero], c1, c0, 0" :: [zero]"r"(0));
+
+	/*Invalidation du cache*/
+	__asm__("mcr p15, 0, r0, c7, c7, 0");
+
+	/*Invalidation de la TLB*/
+	__asm__("mcr p15, 0, r0, c8, c7, 0");
+
+	/*Activation des fonctionnalités de la MMU ARMv6*/
+	control = (1 << 23) | (1 << 15) | (1 << 4) | 1;
+
+	/*Invalidation du buffer de la TLB*/
+	__asm__ volatile("mcr p15, 0, %[data], c8, c7, 0" :: [data]"r"(0));
+
+	/*Écriture du registre de contrôle*/
+	__asm__ volatile("mcr p15, 0, %[control], c1, c0, O" :: [control]"r"(control));
+}
+
+static void configure_mmu_c(void)
+{
+	register unsigned int pt_addr = mmu_base;
+
+	/*Table de traduction 0*/
+	__asm__ volatile("mcr p15, 0, %[addr], c2, c0, 0" :: [addr]"r"(pt_addr));
+	/*Table de traduction 1*/
+	__asm__ volatile("mcr p15, 0, %[addr], c2, c0, 1" :: [addr]"r"(pt_addr));
+
+	/*Ne pas utiliser la table 1*/
+	__asm__ volatile("mcr p15, 0, %[n], c2, c0, 2" :: [n]"r"(0));
+
+	/*Gestion des accès domaines simple*/
+	__asm__ volatile ("mcr p15, 0, %[r], c3, c0, 0" :: [r]"r"(0x3));
+}
+
+void vmem_init(void)
+{
+	init_kern_translation_table();
+	configure_mmu_c();
+	//Interruptions
+	start_mmu_c();
+}
+
 uint32_t init_kern_translation_table(void)
 {
 	uint8_t* base_table = kAlloc_aligned(FIRST_LVL_TT_SIZE, FIRST_LVL_BITSHIFT);
+	mmu_base = base_table;
 	uint32_t device_flags = 0x437; 
 	uint32_t normal_flags = 0x44E;
 	uint32_t coarse_page_flag = 1;

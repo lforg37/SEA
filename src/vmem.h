@@ -15,5 +15,6 @@
 #include <stdint.h>
 
 uint32_t init_kern_translation_table(void);
+void vmem_init(void);
 
 #endif

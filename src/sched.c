@@ -1,5 +1,6 @@
 #include "sched.h"
 #include "kheap.h"
+#include "vmem.h"
 
 #define STACK_SIZE 10240
 
@@ -139,7 +140,11 @@ void do_sys_exit()
 
 void  sched_init(scheduler s)
 {
+#ifdef VMEMEX
+	vmem_init();
+#else
 	kheap_init();	
+#endif
 	setScheduler(s);
 	g_kmain_process.CPSR_user = 0x60000150;
 
