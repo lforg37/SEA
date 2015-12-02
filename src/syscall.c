@@ -73,7 +73,6 @@ void sys_nop()
 	__asm("mov r0, %0" : : "r"(NOP): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
 
 	__asm("SWI #0");
-
 }
 
 void sys_settime(uint64_t date_ms)
