@@ -13,6 +13,12 @@ typedef enum scheduler
 	NEXT_ONE, PRIORITY
 } scheduler;
 
+typedef enum process_state
+{
+	READY, RUNNING, TERMINATED, WAITING
+} process_state;
+
+
 typedef struct pcb_s
 {
 	uint32_t r[13];
@@ -22,11 +28,12 @@ typedef struct pcb_s
 	uint32_t * sp;
 	uint32_t CPSR_user;
 	uint32_t priority;
+	process_state state;
 	struct pcb_s * next_process;
 	struct pcb_s * prev_process;
 } pcb_s;
 
-pcb_s *create_process(func_t* entry);
+pcb_s *create_process(func_t* entry, int priority);
 
 void setScheduler(scheduler s);
 

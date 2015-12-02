@@ -5,6 +5,7 @@
 
 extern uint32_t * g_spArg;
 static scheduler g_current_scheduler;
+static pcb_s *g_higher_priority_process;
 
 pcb_s *g_current_process;
 pcb_s g_kmain_process;
@@ -19,20 +20,31 @@ void start_current_process()
 	sys_exit();
 }
 
-pcb_s * create_process(func_t* entry)
+pcb_s * create_process(func_t* entry, int priority)
 {
 	pcb_s * newPcb = (pcb_s*) kAlloc(sizeof(pcb_s));
 	newPcb->lr_user = (int32_t)entry;
 	newPcb->stack = (uint32_t *)kAlloc(STACK_SIZE);
 	newPcb->sp = newPcb->stack + STACK_SIZE/4;
 	newPcb->CPSR_user = 0x60000150;
+	newPcb->priority = priority;
 	newPcb->lr_svc = (int32_t)&start_current_process;
+	newPcb->state = READY;
+	
+	if (priority > g_higher_priority_process->priority)
+		g_higher_priority_process = newPcb;
 	
 	pcb_s * tmp = g_current_process->next_process;
-	g_current_process->next_process = newPcb;
-	newPcb->prev_process = g_current_process;
+	
+	
+	while (tmp != g_current_process && tmp->priority > priority)
+		tmp = tmp->next_process;
+		
+		
+	newPcb->prev_process = tmp->prev_process;
 	newPcb->next_process = tmp;
 	tmp->prev_process = newPcb;
+	newPcb->prev_process->next_process = newPcb;
 
 	return newPcb;//Utile que pour les tests du chapitre 5 du prof	
 }
@@ -57,8 +69,12 @@ pcb_s *electNextOne()
 }
 
 pcb_s *electBestPriority()
-{
-	return g_current_process->next_process;
+{	
+	pcb_s * tmp = g_higher_priority_process;
+	while(tmp->state == TERMINATED || tmp->state == WAITING)      
+	    tmp = tmp->next_process;
+	
+	return tmp;
 }
 
 void setScheduler(scheduler s)
@@ -88,6 +104,9 @@ void do_sys_yieldto()
 {
 	pcb_s * dest = (pcb_s*)g_spArg[2];
 	
+	if (dest == g_current_process)
+		return;
+	
 	__asm("cps 0x1F");
     __asm("mov %0, lr " : "=r"(g_current_process->lr_user));
 	__asm("mov %0, sp " : "=r"(g_current_process->sp));
@@ -98,7 +117,9 @@ void do_sys_yieldto()
 		g_current_process->r[i] = g_spArg[i + 1];// Sauvgarde de l'ancien contexte
 		g_spArg[i + 1] = dest->r[i];//recuperation du prochain contexte
 	}
-
+	g_current_process->state = READY;
+	dest->state = RUNNING; 
+	
 	g_current_process->CPSR_user = g_spArg[0];
 	g_spArg[0] = dest->CPSR_user;
 	
@@ -116,14 +137,18 @@ void do_sys_yieldto()
 void do_sys_exit()
 {
 	pcb_s *processToDelete = g_current_process;
+	g_current_process->state = TERMINATED;
 	g_spArg[2] = (uint32_t)elect();
 
 	do_sys_yieldto();
 
 	int terminateKernel = 0;
-	if (processToDelete->next_process->next_process == processToDelete)//Si on supprime le dernier processus...
+	if (processToDelete->next_process == processToDelete)//Si on supprime le dernier processus...
 		terminateKernel = 1;
 	
+	if (g_higher_priority_process == processToDelete)
+		g_higher_priority_process = g_higher_priority_process->next_process;
+		
 	processToDelete->next_process->prev_process = processToDelete->prev_process;
 	processToDelete->prev_process->next_process = processToDelete->next_process;
 
@@ -142,6 +167,9 @@ void  sched_init(scheduler s)
 	kheap_init();	
 	setScheduler(s);
 	g_kmain_process.CPSR_user = 0x60000150;
+	g_kmain_process.priority = 0;
+	g_kmain_process.state = RUNNING;
+	g_higher_priority_process = &g_kmain_process;
 
 	g_current_process = &g_kmain_process;
 	g_current_process->next_process = g_current_process;
