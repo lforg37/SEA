@@ -10,7 +10,7 @@ typedef int (func_t)(void);
 
 typedef enum scheduler
 {
-	NEXT_ONE, PRIORITY
+	PRIORITY
 } scheduler;
 
 typedef enum process_state
@@ -42,6 +42,8 @@ void sys_yieldto(struct pcb_s* dest);
 void sys_yield();	
 
 void sys_exit();
+
+void sys_wait(uint32_t miliseconds);
 
 void do_sys_yieldto();
 

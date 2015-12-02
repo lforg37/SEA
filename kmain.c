@@ -5,7 +5,7 @@
 void user_process_1()
 {
 	int v1 = 5;
-	while(v1 < 7)
+	while(1)
 	{
 		v1++;
 	}
@@ -14,7 +14,7 @@ void user_process_1()
 void user_process_2()
 {
 	int v2 = -12;
-	while(v2 > -17)
+	while(1)
 	{
 		v2 -= 2;
 	}
@@ -23,7 +23,7 @@ void user_process_2()
 void user_process_3() 
 {
 	int v3 = 0;
-	while(v3 > 15)
+	while(1)
 	{
 		v3 += 5;
 	}
@@ -35,7 +35,7 @@ void kmain( void )
 	
 	create_process((func_t *)&user_process_1, 3);
  	create_process((func_t *)&user_process_2, 2);
-    create_process((func_t *)&user_process_3, 1);
+    create_process((func_t *)&user_process_3, 3);
 	
 	timer_init();
     ENABLE_IRQ();

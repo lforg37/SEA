@@ -5,14 +5,15 @@
 
 extern uint32_t * g_spArg;
 static scheduler g_current_scheduler;
-static pcb_s *g_higher_priority_process;
+static pcb_s *g_ready_processes;
 
 pcb_s *g_current_process;
 pcb_s g_kmain_process;
 
 static pcb_s *elect();
-static pcb_s *electNextOne();
 static pcb_s *electBestPriority();
+static void removeFromList(pcb_s ** list, pcb_s *e);
+static void insertInList(pcb_s ** list, pcb_s *e);
 
 void start_current_process()
 {
@@ -31,20 +32,7 @@ pcb_s * create_process(func_t* entry, int priority)
 	newPcb->lr_svc = (int32_t)&start_current_process;
 	newPcb->state = READY;
 	
-	if (priority > g_higher_priority_process->priority)
-		g_higher_priority_process = newPcb;
-	
-	pcb_s * tmp = g_current_process->next_process;
-	
-	
-	while (tmp != g_current_process && tmp->priority > priority)
-		tmp = tmp->next_process;
-		
-		
-	newPcb->prev_process = tmp->prev_process;
-	newPcb->next_process = tmp;
-	tmp->prev_process = newPcb;
-	newPcb->prev_process->next_process = newPcb;
+	insertInList(&g_ready_processes, newPcb);
 
 	return newPcb;//Utile que pour les tests du chapitre 5 du prof	
 }
@@ -53,29 +41,69 @@ pcb_s *elect()
 {
 	switch (g_current_scheduler)
 	{
-		case NEXT_ONE :
-			return electNextOne();
 		case PRIORITY :
 			return electBestPriority();
 		default :
-			return electNextOne();
+			return electBestPriority();
 	}
 }
 
-
-pcb_s *electNextOne()
-{
-	return g_current_process->next_process;
-}
-
 pcb_s *electBestPriority()
-{	
-	pcb_s * tmp = g_higher_priority_process;
-	while(tmp->state == TERMINATED || tmp->state == WAITING)      
-	    tmp = tmp->next_process;
-	
-	return tmp;
+{
+	if (g_ready_processes == NULL || 
+		(g_current_process->state == RUNNING && g_current_process->priority > g_ready_processes->priority))
+		return g_current_process;
+	else
+		return g_ready_processes;	
 }
+
+static void removeFromList(pcb_s ** list, pcb_s *e)
+{
+	if (e == *list)
+	{
+		if (e->next_process == e)
+			*list = NULL;
+		else
+			*list = e->next_process;
+	}
+	else
+	{
+		e->next_process->prev_process = e->prev_process;
+		e->prev_process->next_process = e->next_process;
+	
+		e->next_process = NULL;
+		e->prev_process = NULL;
+	}
+}
+
+static void insertInList(pcb_s ** list, pcb_s *e)
+{
+	if (*list == NULL)
+	{
+		*list = e;
+		e->next_process = e;
+		e->prev_process = e;
+	}
+	else
+	{	
+		pcb_s * tmp = *list;
+		do
+		{    
+			if (tmp->priority > e->priority)
+				tmp = tmp->next_process;
+			else 
+				break;
+		}while(tmp != *list);     
+		tmp = tmp->prev_process;
+		
+		e->next_process = tmp->next_process;
+		e->prev_process = tmp;
+	
+		tmp->next_process->prev_process = e;
+		tmp->next_process = e;
+	}
+}
+
 
 void setScheduler(scheduler s)
 {
@@ -91,6 +119,11 @@ void sys_exit()
 {
 	__asm("mov r0, %0" : : "r"(SYS_EXIT): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
 	__asm("SWI #0");
+}
+
+void sys_wait(uint32_t miliseconds)
+{
+
 }
 
 void sys_yieldto(pcb_s * dest)
@@ -117,8 +150,14 @@ void do_sys_yieldto()
 		g_current_process->r[i] = g_spArg[i + 1];// Sauvgarde de l'ancien contexte
 		g_spArg[i + 1] = dest->r[i];//recuperation du prochain contexte
 	}
-	g_current_process->state = READY;
+	
+	if (g_current_process->state == RUNNING)
+	{
+		g_current_process->state = READY;
+		insertInList(&g_ready_processes, g_current_process);
+	}
 	dest->state = RUNNING; 
+	removeFromList(&g_ready_processes, dest);
 	
 	g_current_process->CPSR_user = g_spArg[0];
 	g_spArg[0] = dest->CPSR_user;
@@ -143,11 +182,8 @@ void do_sys_exit()
 	do_sys_yieldto();
 
 	int terminateKernel = 0;
-	if (processToDelete->next_process == processToDelete)//Si on supprime le dernier processus...
+	if (g_ready_processes == NULL)//Si on supprime le dernier processus...
 		terminateKernel = 1;
-	
-	if (g_higher_priority_process == processToDelete)
-		g_higher_priority_process = g_higher_priority_process->next_process;
 		
 	processToDelete->next_process->prev_process = processToDelete->prev_process;
 	processToDelete->prev_process->next_process = processToDelete->next_process;
@@ -169,11 +205,11 @@ void  sched_init(scheduler s)
 	g_kmain_process.CPSR_user = 0x60000150;
 	g_kmain_process.priority = 0;
 	g_kmain_process.state = RUNNING;
-	g_higher_priority_process = &g_kmain_process;
 
 	g_current_process = &g_kmain_process;
-	g_current_process->next_process = g_current_process;
-	g_current_process->prev_process = g_current_process;
+	g_current_process->next_process = NULL;
+	g_current_process->prev_process = NULL;
+	g_ready_processes = NULL;
 }
 
 void __attribute__((naked)) irq_handler(void)
