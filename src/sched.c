@@ -6,14 +6,16 @@
 extern uint32_t * g_spArg;
 static scheduler g_current_scheduler;
 static pcb_s *g_ready_processes;
+static pcb_s *g_waiting_processes;
+static uint64_t dateForWaitingProcess;
 
 pcb_s *g_current_process;
 pcb_s g_kmain_process;
 
 static pcb_s *elect();
 static pcb_s *electBestPriority();
+static void insertInList(pcb_s ** list, pcb_s *e, uint8_t usePriority);
 static void removeFromList(pcb_s ** list, pcb_s *e);
-static void insertInList(pcb_s ** list, pcb_s *e);
 
 void start_current_process()
 {
@@ -31,8 +33,9 @@ pcb_s * create_process(func_t* entry, int priority)
 	newPcb->priority = priority;
 	newPcb->lr_svc = (int32_t)&start_current_process;
 	newPcb->state = READY;
+	newPcb->wakingTime = 0;
 	
-	insertInList(&g_ready_processes, newPcb);
+	insertInList(&g_ready_processes, newPcb, 1);
 
 	return newPcb;//Utile que pour les tests du chapitre 5 du prof	
 }
@@ -59,49 +62,62 @@ pcb_s *electBestPriority()
 
 static void removeFromList(pcb_s ** list, pcb_s *e)
 {
-	if (e == *list)
+	if (e == *list)//Si jamais c'est le permier élément
 	{
-		if (e->next_process == e)
+		if (e->next_process == e)//Si la liste n'en contient qu'un
 			*list = NULL;
 		else
 			*list = e->next_process;
 	}
-	else
+	
+	if (e->next_process != NULL && e->prev_process != NULL)
 	{
 		e->next_process->prev_process = e->prev_process;
 		e->prev_process->next_process = e->next_process;
-	
-		e->next_process = NULL;
-		e->prev_process = NULL;
 	}
+	
+	e->next_process = NULL;
+	e->prev_process = NULL;
+	
 }
 
-static void insertInList(pcb_s ** list, pcb_s *e)
+static void insertInList(pcb_s ** list, pcb_s *e, uint8_t usePriority)
 {
 	if (*list == NULL)
 	{
 		*list = e;
 		e->next_process = e;
 		e->prev_process = e;
+		return;
+	}
+	pcb_s * tmp = NULL;
+	if ((usePriority && (*list)->priority < e->priority) ||
+		(!usePriority && (*list)->wakingTime < e->wakingTime))
+	{
+		tmp = *list;
+		*list = e;
 	}
 	else
 	{	
-		pcb_s * tmp = *list;
+		tmp = *list;
 		do
 		{    
-			if (tmp->priority > e->priority)
+			if ((usePriority && tmp->priority >= e->priority) ||
+				(!usePriority && tmp->wakingTime >= e->wakingTime))
 				tmp = tmp->next_process;
 			else 
 				break;
-		}while(tmp != *list);     
-		tmp = tmp->prev_process;
+		}while(tmp != *list);  
 		
-		e->next_process = tmp->next_process;
-		e->prev_process = tmp;
-	
-		tmp->next_process->prev_process = e;
-		tmp->next_process = e;
+		
 	}
+		
+	tmp->prev_process->next_process = e;
+		
+	e->next_process = tmp;
+	e->prev_process = tmp->prev_process;
+	
+	tmp->prev_process = e;
 }
 
 
@@ -123,7 +139,11 @@ void sys_exit()
 
 void sys_wait(uint32_t miliseconds)
 {
-
+	__asm("mov r1, %0" : : "r"(miliseconds): "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+	__asm("mov r0, %0" : : "r"(WAIT): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+	__asm("SWI #0");
+	
+	sys_yield();
 }
 
 void sys_yieldto(pcb_s * dest)
@@ -131,6 +151,16 @@ void sys_yieldto(pcb_s * dest)
 	__asm("mov r1, %0" : : "r"(dest): "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
 	__asm("mov r0, %0" : : "r"(YIELDTO): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
 	__asm("SWI #0");
+}
+
+void do_sys_wait()
+{
+	uint32_t milisec = g_spArg[2];
+	
+	//Ajout dans la liste des processus en attente
+	g_current_process->wakingTime = dateForWaitingProcess + milisec;
+	g_current_process->state = WAITING;
+	insertInList(&g_waiting_processes, g_current_process, 0);
 }
 
 void do_sys_yieldto()
@@ -154,7 +184,7 @@ void do_sys_yieldto()
 	if (g_current_process->state == RUNNING)
 	{
 		g_current_process->state = READY;
-		insertInList(&g_ready_processes, g_current_process);
+		insertInList(&g_ready_processes, g_current_process, 1);
 	}
 	dest->state = RUNNING; 
 	removeFromList(&g_ready_processes, dest);
@@ -210,6 +240,9 @@ void  sched_init(scheduler s)
 	g_current_process->next_process = NULL;
 	g_current_process->prev_process = NULL;
 	g_ready_processes = NULL;
+	g_waiting_processes = NULL;
+	
+	dateForWaitingProcess = 0;
 }
 
 void __attribute__((naked)) irq_handler(void)
@@ -217,6 +250,18 @@ void __attribute__((naked)) irq_handler(void)
 	__asm("STMFD sp!, {r0-r12, lr}");
     __asm("MRS r4, spsr");
     __asm("STMFD sp!, {r4}");
+    
+    
+	//On vérifie si on doit réveiller des processus
+	dateForWaitingProcess += 10;
+	while (g_waiting_processes != NULL && g_waiting_processes->wakingTime <= dateForWaitingProcess)
+	{
+		g_waiting_processes->state = READY;
+		g_waiting_processes->wakingTime = 0;
+		pcb_s *tmp = g_waiting_processes;
+		removeFromList(&g_waiting_processes, tmp);
+		insertInList(&g_ready_processes, tmp, 1);
+	}
 
 	//selection du prochain processus
 	__asm("mov %0, sp" : "=r"(g_spArg));

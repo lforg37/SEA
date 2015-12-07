@@ -17,6 +17,7 @@ void user_process_2()
 	while(1)
 	{
 		v2 -= 2;
+		sys_wait(30);
 	}
 }
 
@@ -34,8 +35,7 @@ void kmain( void )
 	sched_init(PRIORITY);
 	
 	create_process((func_t *)&user_process_1, 3);
- 	create_process((func_t *)&user_process_2, 2);
-    create_process((func_t *)&user_process_3, 3);
+ 	create_process((func_t *)&user_process_2, 3);
 	
 	timer_init();
     ENABLE_IRQ();

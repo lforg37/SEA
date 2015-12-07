@@ -15,6 +15,6 @@ void __attribute__((naked)) swi_handler(void);
 
 enum action
 {
-	DEFAULT, REBOOT, NOP, SETTIME, GETTIME, YIELDTO, SYS_EXIT
+	DEFAULT, REBOOT, NOP, SETTIME, GETTIME, YIELDTO, SYS_EXIT, WAIT
 };
 #endif

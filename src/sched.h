@@ -31,6 +31,8 @@ typedef struct pcb_s
 	process_state state;
 	struct pcb_s * next_process;
 	struct pcb_s * prev_process;
+	
+	uint64_t wakingTime;
 } pcb_s;
 
 pcb_s *create_process(func_t* entry, int priority);
@@ -46,6 +48,8 @@ void sys_exit();
 void sys_wait(uint32_t miliseconds);
 
 void do_sys_yieldto();
+
+void do_sys_wait();
 
 void do_sys_exit();
 

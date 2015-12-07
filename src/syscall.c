@@ -137,6 +137,9 @@ void __attribute__((naked)) swi_handler(void)
 		case SYS_EXIT :
 			do_sys_exit();
 			break;
+		case WAIT :
+			do_sys_wait();
+			break;
 		default :
 			PANIC();
 			break;
