@@ -1,7 +1,36 @@
 #include "util.h"
 #include "syscall.h"
 #include "sched.h"
+#include "stdint.h"
+#include "keyboard.h"
+#include "hw.h"
 
+//extern void KeyboardUpdate();
+void UsbInitialise();
+
+//extern char KeyboardGetChar();
+/*
+void blink_leds(int fois, int adresse) 
+{
+	int eteint = 0x00000000;
+	int leds = 0;
+	
+	__asm("mov r0, %0" : : "r"(adresse)); //address
+	__asm("bl KeyboardGetLedSupport");
+	__asm("mov %0, r0" : "=r"(leds));
+
+	for (int i = 0; i<fois ; i++)
+	{
+		__asm("mov r0, %0" : : "r"(adresse)); //address
+		__asm("mov r1, %0" : : "r"(leds));
+		__asm("bl KeyboardSetLeds");
+		
+		__asm("mov r0, %0" : : "r"(adresse)); //address
+		__asm("mov r1, %0" : : "r"(eteint));
+		__asm("bl KeyboardSetLeds");
+	}
+}
+*/
 void user_process_1()
 {
 	int v1 = 5;
@@ -30,7 +59,45 @@ void user_process_3()
 }
 
 void init_clavier()
-{
+{	
+	/*int nbClavier = -1;
+
+	__asm("bl UsbInitialise");
+	do {
+		__asm("bl UsbCheckForChange");
+		__asm("bl KeyboardCount");
+		__asm("mov %0, r0" : "=r"(nbClavier));
+	} while (nbClavier <= 0);
+	
+	int adresse = -1;
+	int index = 0;
+
+	__asm("mov r0, %0" : : "r"(index));
+	__asm("bl KeyboardGetAddress");
+	__asm("mov %0, r0" : "=r"(adresse));*/
+
+
+
+
+	/*extern uint32_t KeyboardAddress;
+	
+	KeyboardAddress = -1;
+	
+	do {
+		KeyboardUpdate();
+	} while (KeyboardAddress == -1);
+		
+	blink_leds(KeyboardAddress, adresse);*/
+	
+	/*char lastChar = 0;
+	
+	do {
+		lastChar = KeyboardGetChar();
+	} while(lastChar == 0);
+
+	blink_leds(200, adresse);
+	*/
+	
 	__asm("bl UsbInitialise");
 	
 	while (1)
@@ -41,42 +108,84 @@ void init_clavier()
 			__asm("bl UsbCheckForChange");
 			__asm("bl KeyboardCount");
 			__asm("mov %0, r0" : "=r"(nbClavier));
-		} while (nbClavier == 0);
+		} while (nbClavier < 0);
 
 		int adresse = -1;
 		int index = 0;
-		int nbKeysDown = -1;
-		int keyCode = -1;
+		int nbKeysDown = 0;
+		//int keyCode = -1;
+		//int status = 0;
+		
+		//int keysPushed[50];
+			
 
+				
 		__asm("mov r0, %0" : : "r"(index));
 		__asm("bl KeyboardGetAddress");
 		__asm("mov %0, r0" : "=r"(adresse));
 
-		while (nbKeysDown <= 0)
-		{
-			__asm("bl KeybordGetKeyDownCount");
-			__asm("mov %0, r0" : "=r"(nbKeysDown));
-
-			//wait();
-		}
-		
-		__asm("mov r0, %0" : : "r"(adresse));
-		__asm("mov r1, %0" : : "r"(index+1));
+		/*__asm("mov r0, %0" : : "r"(adresse)); //address
+		__asm("mov r1, %0" : : "r"(0)); //key number
 		__asm("bl KeyboardGetKeyDown");
-		__asm("mov %0, r0" : "=r"(keyCode));
+		__asm("mov %0, r0" : "=r"(keyCode)); //scan code*/
+
+		__asm("mov r0, %0" : : "r"(adresse)); //address
+		__asm("bl KeyboardGetKeyDownCount");
+		__asm("mov %0, r0" : "=r"(nbKeysDown));
+
+		int eteint = 0x00000000;
+		int leds = 0;
+		
+		__asm("mov r0, %0" : : "r"(adresse)); //address
+		__asm("bl KeyboardGetLedSupport");
+		__asm("mov %0, r0" : "=r"(leds));
+
+		for (int i = 0 ; i<nbKeysDown ; i++)
+		{
+			__asm("mov r0, %0" : : "r"(adresse)); //address
+			__asm("mov r1, %0" : : "r"(leds));
+			__asm("bl KeyboardSetLeds");
+			
+			__asm("mov r0, %0" : : "r"(adresse)); //address
+			__asm("mov r1, %0" : : "r"(eteint));
+			__asm("bl KeyboardSetLeds");
+		}
+			
+			/*keysPushed[0] = keyCode;*/
+			//blink_leds(keyCode, adresse);
+
+		/*}
+		
+		for (int i = 0 ; i<nbKeysDown ; i++)
+		{
+			__asm("mov r0, %0" : : "r"(adresse)); //address
+			__asm("mov r1, %0" : : "r"(keysPushed[i])); //key number
+			__asm("bl KeyboadGetKeyIsDown");
+			__asm("mov %0, r0" : "=r"(status)); //scan code
+			
+			if (status != 0)
+			{
+				blink_leds(1, adresse);
+			}
+		}*/
 	}
 }
 
 void kmain( void )
 {
+	led_blink();
+	
 	sched_init(PRIORITY);
 	
-	create_process((func_t *)&init_clavier);
+	UsbInitialise();
 
+	create_process((func_t *)&KeyboardUpdate);
+
+/*
 	create_process((func_t *)&user_process_1);
  	create_process((func_t *)&user_process_2);
     create_process((func_t *)&user_process_3);
-	
+*/
 	timer_init();
     ENABLE_IRQ();
 
