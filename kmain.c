@@ -4,6 +4,7 @@
 #include "stdint.h"
 #include "keyboard.h"
 #include "hw.h"
+#include "fb.h"
 
 //extern void KeyboardUpdate();
 void UsbInitialise();
@@ -33,30 +34,12 @@ void blink_leds(int fois, int adresse)
 */
 void user_process_1()
 {
-	int v1 = 5;
 	while(1)
 	{
-		v1++;
+		
 	}
 }
 
-void user_process_2()
-{
-	int v2 = -12;
-	while(1)
-	{
-		v2 -= 2;
-	}
-}
-
-void user_process_3() 
-{
-	int v3 = 0;
-	while(1)
-	{
-		v3 += 5;
-	}
-}
 
 void init_clavier()
 {	
@@ -176,6 +159,7 @@ void kmain( void )
 	led_blink();
 	
 	sched_init(PRIORITY);
+	FramebufferInitialize();
 	
 	UsbInitialise();
 
@@ -186,14 +170,20 @@ void kmain( void )
  	create_process((func_t *)&user_process_2);
     create_process((func_t *)&user_process_3);
 */
+	//create_process((func_t *)&user_process_1, 3);
+	
 	timer_init();
     ENABLE_IRQ();
 
 	__asm("cps 0x10"); // switch CPU to USER mode
 	
+	draw(0, 0, 0);
+	drawString("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est\n laborum.", 0, 30, 255, 0, 0);
+		
+	
 	// **********************************************************************
 	while(1)
 	{
-		sys_yield();
+		
 	}
 }

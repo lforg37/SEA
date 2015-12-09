@@ -6,15 +6,39 @@
 #include "hw.h"
 #include "sched.h"
 
-static void do_sys_reboot();
+//Globals au programme
+uint32_t * g_spArg;
 
-static void do_sys_nop();
-
-static void do_sys_settime();
-
+// **************************************** définition fonctions locales
+//Retourne l'heure du système (mode privilégié)
 static void do_sys_gettime();
 
-uint32_t * g_spArg;
+//inutile
+static void do_sys_nop();
+
+//Redémarre le RPI (mode privilégié)
+static void do_sys_reboot();
+
+//Modifie l'heure du système mode privilégié)
+static void do_sys_settime();
+
+// ********************************************************************
+
+void do_sys_gettime()
+{
+	uint64_t date_ms = get_date_ms();
+	
+	uint32_t date1 = date_ms & 0x00000000ffffffff;
+	uint32_t date2 = (date_ms & 0xffffffff00000000) >> 32;
+	
+	g_spArg[1] = date1;
+	g_spArg[2] = date2;
+}
+
+void do_sys_nop()
+{
+	
+}
 
 void do_sys_reboot()
 {
@@ -33,11 +57,6 @@ void do_sys_reboot()
 #endif
 }
 
-void do_sys_nop()
-{
-	
-}
-
 void do_sys_settime()
 {	
 	uint64_t date_ms;
@@ -48,61 +67,6 @@ void do_sys_settime()
 	date_ms = (uint64_t) date2 << 32 | date1;
 		
 	set_date_ms(date_ms);
-}
-
-void do_sys_gettime()
-{
-	uint64_t date_ms = get_date_ms();
-	
-	uint32_t date1 = date_ms & 0x00000000ffffffff;
-	uint32_t date2 = (date_ms & 0xffffffff00000000) >> 32;
-	
-	g_spArg[1] = date1;
-	g_spArg[2] = date2;
-}
-
-void sys_reboot()
-{
-	__asm("mov r0, %0" : : "r"(REBOOT));
-	__asm("SWI #0");
-	
-}
-
-void sys_nop()
-{
-	__asm("mov r0, %0" : : "r"(NOP): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
-
-	__asm("SWI #0");
-}
-
-void sys_settime(uint64_t date_ms)
-{	
-	uint32_t date1 = date_ms & 0x00000000ffffffff;
-	uint32_t date2 = (date_ms & 0xffffffff00000000) >> 32;
-		
-	__asm("mov r1, %0" : : "r"(date1): "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
-	__asm("mov r2, %0" : : "r"(date2): "r1", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
-
-	__asm("mov r0, %0" : : "r"(SETTIME): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
-
-	__asm("SWI #0");
-
-}
-
-uint64_t sys_gettime()
-{
-	__asm("mov r0, %0" : : "r"(GETTIME): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
-	__asm("SWI #0");
-	
-	uint64_t date_ms;
-	
-	uint32_t date1, date2;
-	__asm("mov %0, r0" : "=r"(date1));
-	__asm("mov %0, r1" : "=r"(date2));
-	
-	date_ms = (uint64_t) date2 << 32 | date1;
-
-	return date_ms;
 }
 
 void __attribute__((naked)) swi_handler(void)
@@ -136,6 +100,9 @@ void __attribute__((naked)) swi_handler(void)
 		case SYS_EXIT :
 			do_sys_exit();
 			break;
+		case WAIT :
+			do_sys_wait();
+			break;
 		default :
 			PANIC();
 			break;
@@ -144,4 +111,49 @@ void __attribute__((naked)) swi_handler(void)
 	__asm("LDMFD sp!, {r4}");	
 	__asm("MSR spsr, r4");
 	__asm("LDMFD sp!, {r0-r12, pc}^");	
+}
+
+uint64_t sys_gettime()
+{
+	__asm("mov r0, %0" : : "r"(GETTIME): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+	__asm("SWI #0");
+	
+	uint64_t date_ms;
+	
+	uint32_t date1, date2;
+	__asm("mov %0, r0" : "=r"(date1));
+	__asm("mov %0, r1" : "=r"(date2));
+	
+	date_ms = (uint64_t) date2 << 32 | date1;
+
+	return date_ms;
+}
+
+void sys_nop()
+{
+	__asm("mov r0, %0" : : "r"(NOP): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+
+	__asm("SWI #0");
+
+}
+
+void sys_reboot()
+{
+	__asm("mov r0, %0" : : "r"(REBOOT));
+	__asm("SWI #0");
+	
+}
+
+void sys_settime(uint64_t date_ms)
+{	
+	uint32_t date1 = date_ms & 0x00000000ffffffff;
+	uint32_t date2 = (date_ms & 0xffffffff00000000) >> 32;
+		
+	__asm("mov r1, %0" : : "r"(date1): "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+	__asm("mov r2, %0" : : "r"(date2): "r1", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+
+	__asm("mov r0, %0" : : "r"(SETTIME): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+
+	__asm("SWI #0");
+
 }
