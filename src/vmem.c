@@ -6,8 +6,12 @@
 #include "sched.h"
 
 #define DEV_ADDR_FLAG 0x20000000
+#define NB_FRAME 0x21000
 
 static uint32_t mmu_base;
+static void init_frame_table();
+static uint8_t* frame_table;
+static uint16_t idx_last_frame_allocated;
 #ifdef verifINIT
 static uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
 static void verify_init();
@@ -59,12 +63,22 @@ static void configure_mmu_c(void)
 void vmem_init(void)
 {
 	init_kern_translation_table();
+	init_frame_table();
 	configure_mmu_c();
 #ifdef verifINIT
 	verify_init();
 #endif
 	//Interruptions
 	start_mmu_c();
+}
+
+uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
+{
+	size_t nb_pages = size / PAGE_SIZE;
+	if (nb_pages % PAGE_SIZE > 0) {
+		nb_pages++;
+	}
+
 }
 
 uint32_t init_kern_translation_table(void)
@@ -182,6 +196,26 @@ uint32_t init_kern_translation_table(void)
 	}
 
 	return 0;
+}
+
+//Adresse reelle : frameNumber 0x
+
+static void init_frame_table()
+{
+	frame_table = (uint8_t*) kAlloc(NB_FRAME/8);
+	size_t i;
+	for(i = 0 ; i < NB_FRAME / 8 ; i++)
+	{
+		if (i < 0x2000) {
+			frame_table[i] = 0xFF;
+		} else if (i == 0x2000 ) {
+			
+		}
+		
+		else if ( i < 0x4000 && i > 2
+
+	}
+	
 }
 
 #ifdef verifINIT
