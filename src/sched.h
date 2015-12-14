@@ -24,15 +24,17 @@ typedef struct pcb_s
 	uint32_t r[13];
 	uint32_t lr_svc;
 	uint32_t lr_user;
-	uint32_t * stack;
-	uint32_t * sp;
+	uint32_t* stack;
+	uint32_t* sp;
 	uint32_t CPSR_user;
 	uint32_t priority;
 	process_state state;
-	struct pcb_s * next_process;
-	struct pcb_s * prev_process;
-	
+	struct pcb_s* next_process;
+	struct pcb_s* prev_process;	
 	uint64_t wakingTime;
+	uint32_t* pagetable_addr;
+	uint32_t* heap_base;
+	uint32_t* heap_top;
 } pcb_s;
 
 // ********************** PUBLIC **********************

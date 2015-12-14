@@ -6,12 +6,15 @@
 #include "sched.h"
 
 #define DEV_ADDR_FLAG 0x20000000
-#define NB_FRAME 0x21000
+#define IO_START 0x20000000
+#define idx_first_ram_page 0x200
+#define idx_last_ram_page 0x3FFF
 
 static uint32_t mmu_base;
 static void init_frame_table();
 static uint8_t* frame_table;
-static uint16_t idx_last_frame_allocated;
+static uint32_t idx_last_frame_allocated;
+
 #ifdef verifINIT
 static uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
 static void verify_init();
@@ -72,13 +75,49 @@ void vmem_init(void)
 	start_mmu_c();
 }
 
+static uint32_t* get_free_frame()
+{
+	size_t iter_idx;
+	for (iter_idx = idx_last_frame_allocated ; 
+			(frame_table[iter_idx] == 0xFF && iter_idx < idx_last_ram_page);
+			iter_idx++
+		);
+
+	if(frame_table[iter_idx] ==  0xFF)
+	{
+		for (iter_idx = idx_first_ram_page; 
+			(frame_table[iter_idx] == 0xFF && iter_idx < idx_last_frame_allocated -1);
+			iter_idx++
+		);
+
+		if(frame_table[iter_idx] == 0xFF)
+		{
+			return NULL;
+		}
+	}
+
+	uint8_t shift;
+	uint8_t mask = frame_table[iter_idx];
+	for (shift = 0 ; shift < 8 && (((mask >> shift) & 0x01) != 0) ; shift++);
+	
+	uint32_t address = ((iter_idx * 8) + shift) * PAGE_SIZE;
+	return (uint32_t *) address;	
+}
+
 uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
 {
 	size_t nb_pages = size / PAGE_SIZE;
 	if (nb_pages % PAGE_SIZE > 0) {
 		nb_pages++;
 	}
-
+	
+	uint8_t* page_start = get_contiguous_addr(process, nb_pages);
+	size_t i;
+	uint32_t *frame;
+	for(i = 0 ; i < nb_pages ; i++)
+	{
+		frame = get_free_frame();
+	}
 }
 
 uint32_t init_kern_translation_table(void)
@@ -95,50 +134,6 @@ uint32_t init_kern_translation_table(void)
 	uint32_t virtual_addr = 0;
 	uint32_t* second_lvl_tt_entry;
 	uint32_t* first_lvl_tt = (uint32_t*) base_table;
-
-	/* Initialisation for kernel heap 
-	while(virtual_addr <= FIRST_LVL_START(__kernel_heap_end__)) {
-		second_lvl_tt = (uint32_t*) kAlloc_aligned(SECON_LVL_TT_SIZE, SECON_LVL_INDEX_WIDTH);	
-		second_lvl_tt_entry = second_lvl_tt;
-		*first_lvl_tt++ = ((uint32_t)second_lvl_tt & 0xFFFFFC00) + coarse_page_flag; 
-
-		for (j = 0; j < SECON_LVL_TT_COUN ; j++) {
-			if (is_init_addr(virtual_addr)) {
-				*second_lvl_tt_entry = (virtual_addr & 0xFFFFF000)+ normal_flags;	
-			} else {
-				*second_lvl_tt_entry = 0;	
-			}
-			second_lvl_tt_entry++;
-			virtual_addr += PAGE_SIZE;
-		}
-	}
-
-	while (virtual_addr < 0x20000000) {
-		*first_lvl_tt++ = 0;
-		virtual_addr += SECON_LVL_TT_COUN * PAGE_SIZE;
-	}
-
-	while (virtual_addr <= FIRST_LVL_START(0x20FFFFFF)) {
-		second_lvl_tt = (uint32_t*) kAlloc_aligned(SECON_LVL_TT_SIZE, SECON_LVL_BITSHIFT);	
-		second_lvl_tt_entry = second_lvl_tt;
-		*first_lvl_tt++ = ((uint32_t)second_lvl_tt & 0xFFFFFC00) + coarse_page_flag; 
-
-		for (j = 0; j < SECON_LVL_TT_COUN ; j++) {
-			if (is_init_addr(virtual_addr)) {
-				*second_lvl_tt_entry = (virtual_addr & 0xFFFFF000)+ device_flags;	
-			} else {
-				*second_lvl_tt_entry = 0;	
-			}
-			second_lvl_tt_entry++;
-			virtual_addr += PAGE_SIZE;
-		}
-	}
-
-	uint32_t test = FIRST_LVL_START(0XFFFFFFFF);
-	while(virtual_addr < test) { 
-		*first_lvl_tt++ = 0;
-		virtual_addr += SECON_LVL_TT_COUN * PAGE_SIZE;
-	}*/
 
 	uint32_t flag = 0;
 	uint32_t virtual_addr_lvl_2;
@@ -198,24 +193,22 @@ uint32_t init_kern_translation_table(void)
 	return 0;
 }
 
-//Adresse reelle : frameNumber 0x
-
 static void init_frame_table()
 {
-	frame_table = (uint8_t*) kAlloc(NB_FRAME/8);
+	size_t nb_frames = IO_START / (PAGE_SIZE * 8);
+	frame_table = (uint8_t*) kAlloc(nb_frames/8);
+	(uint8_t*) frame_table_ptr = frame_table;
 	size_t i;
-	for(i = 0 ; i < NB_FRAME / 8 ; i++)
+	for(i = 0 ; i < nb_frames ; i++)
 	{
-		if (i < 0x2000) {
-			frame_table[i] = 0xFF;
-		} else if (i == 0x2000 ) {
-			
+		if (i < 0x200) {
+			*frame_table_ptr++ = 0xFF;
+		} else {
+			*frame_table_ptr++ =  0;
 		}
-		
-		else if ( i < 0x4000 && i > 2
-
 	}
 	
+	idx_last_frame_allocated = 0x200;
 }
 
 #ifdef verifINIT

@@ -3,6 +3,7 @@
 #include "vmem.h"
 
 #define STACK_SIZE 10240
+#define NULL 0
 
 extern uint32_t * g_spArg;
 
