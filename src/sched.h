@@ -5,6 +5,7 @@
 #include "syscall.h"
 #include "hw.h"
 #include "asm_tools.h"
+#include "vmem.h"
 
 typedef int (func_t)(void);
 
@@ -17,7 +18,6 @@ typedef enum process_state
 {
 	READY, RUNNING, TERMINATED, WAITING
 } process_state;
-
 
 typedef struct pcb_s
 {
@@ -33,6 +33,9 @@ typedef struct pcb_s
 	struct pcb_s * prev_process;
 	
 	uint64_t wakingTime;
+
+	page_element* free_list;
+	page_element* occupied_list;
 } pcb_s;
 
 // ********************** PUBLIC **********************

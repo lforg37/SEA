@@ -14,6 +14,17 @@
 #define FIRST_LVL_START(ADDR) (ADDR & (0xFFFFFFFF - (1 << FIRST_LVL_BITSHIFT) +1))
 
 #include <stdint.h>
+#include <stdlib.h>
+
+typedef struct page_element
+{
+	uint8_t* adress;
+	size_t nb_pages;
+	struct page_element* next;
+
+} page_element;
+
+typedef page_element page_list;
 
 uint32_t init_kern_translation_table(void);
 void vmem_init(void);

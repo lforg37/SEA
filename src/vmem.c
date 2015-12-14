@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <stdbool.h>
 #include "vmem.h"
 #include "util.h"
@@ -12,10 +11,16 @@ static uint32_t mmu_base;
 static void init_frame_table();
 static uint8_t* frame_table;
 static uint16_t idx_last_frame_allocated;
+
+static page_list* insert_list(page_list* list, uint8_t* adress,
+        uint8_t nb_pages, bool merge);
+static uint8_t* get_contiguous_addr(pcb_s* process, size_t size);
+
 #ifdef verifINIT
 static uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
 static void verify_init();
 #endif
+
 
 static bool is_init_addr(uint32_t addr)
 {
@@ -79,6 +84,96 @@ uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
 		nb_pages++;
 	}
 
+}
+
+// size_t size : taille en nombre de page
+uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
+{
+	page_element* free_list = process->free_list;
+	page_element* occupied_list = process->occupied_list;
+	page_element* current_element;
+    page_element* previous_element = NULL;
+
+    current_element = free_list;
+
+	do {
+		if(current_element->nb_pages >= size) {
+            // assez de pages consécutives
+
+            insert_list(occupied_list, current_element->adress,
+                    size, false);
+			
+			if(current_element->nb_pages != size) {
+                // on rabote l'élément       
+
+                current_element->nb_pages -= size;
+                current_element->adress = (uint8_t*)
+                    ((current_element->nb_pages * PAGE_SIZE)
+                    + (uint32_t) current_element->adress);
+
+			} else if (previous_element != NULL) {
+                previous_element->next = current_element->next;
+            }
+
+            return current_element->adress;
+		}
+
+        previous_element = current_element;
+		current_element = current_element->next;
+
+	} while(current_element != NULL);
+
+	return NULL; // code d'erreur à définir
+}
+
+// bool merge : vaut vrai lorsqu'on insère dans la free_list
+page_list* insert_list(page_list* list, uint8_t* adress,
+        uint8_t nb_pages, bool merge)
+{
+	page_element* current = list;
+    page_element* previous = NULL;
+
+	while(current != NULL) {
+        if(adress < current->adress) {
+
+            if(merge) {
+                uint8_t* next_adress =
+                    (uint8_t*)((size_t) adress + (PAGE_SIZE * nb_pages));
+
+                if(next_adress == current->adress) {
+                    current->adress = adress;
+                    current->nb_pages += nb_pages;
+
+                    return list;
+                }
+            }
+
+            page_element* new_element =
+                    (page_element*) malloc(sizeof(page_element));
+            
+            if(previous != NULL) {
+                previous->next = new_element;
+            }
+            
+            new_element->next = current;
+            new_element->adress = adress;
+            new_element->nb_pages = nb_pages;
+
+            return list;
+        }
+
+        previous = current;
+        current = current->next;
+    }
+
+    // la liste est vide
+    list = (page_element*) malloc(sizeof(page_element));
+    
+    list->next = NULL;
+    list->adress = adress;
+    list->nb_pages = nb_pages;
+
+    return list;
 }
 
 uint32_t init_kern_translation_table(void)
