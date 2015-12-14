@@ -23,7 +23,6 @@ static uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
 static void verify_init();
 #endif
 
-
 static bool is_init_addr(uint32_t addr)
 {
 	return (addr <= (uint32_t) &__kernel_heap_end__)|| ((addr & 0xFF000000) == DEV_ADDR_FLAG );
@@ -108,20 +107,34 @@ static uint32_t* get_free_frame()
 	return (uint32_t *) address;	
 }
 
+static void map_table(pcb_s* process, uint32_t frame_idx, uint32_t process_addr)
+{
+	uint32_t* addr_ptr = process->page_table_addr + process_addr/(PAGE_SIZE * SECON_LVL_TT_COUN);
+	if(*)
+	{
+
+	}
+}
+
 uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
 {
-	size_t nb_pages = size / PAGE_SIZE;
-	if (nb_pages % PAGE_SIZE > 0) {
+	size_t nb_pages = size / (PAGE_SIZE * 4);
+	if (nb_pages % (4 * PAGE_SIZE) > 0) {
 		nb_pages++;
 	}
 	
 	uint8_t* page_start = get_contiguous_addr(process, nb_pages);
+	uint32_t page_addr = (uint32_t) page_start;
 	size_t i;
 	uint32_t *frame;
 	for(i = 0 ; i < nb_pages ; i++)
 	{
 		frame = get_free_frame();
+		map_table(process, frame, page_addr);	
+		page_addr += page_size;
 	}
+
+	return page_start;
 }
 
 // size_t size : taille en nombre de page
