@@ -13,7 +13,7 @@ kernel_for_sdcard: kernel_for_qemu build/kernel.img
 remake: clean all
 
 # The names of libraries to use.
-LIBRARIES := csud
+LIBRARIES := 
 
 # options à passer au compilateur C
 CFLAGS=-Wall -Werror -nostdlib -nostartfiles -mfloat-abi=softfp -mfpu=vfp -ffreestanding -std=c99 -g -nostartfiles -O0 -fdiagnostics-show-option -fomit-frame-pointer

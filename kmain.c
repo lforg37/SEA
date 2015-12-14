@@ -2,12 +2,13 @@
 #include "syscall.h"
 #include "sched.h"
 #include "stdint.h"
-#include "keyboard.h"
+#include "keyboard-nous.h"
+#include "usbd.h"
 #include "hw.h"
 #include "fb.h"
 
 //extern void KeyboardUpdate();
-void UsbInitialise();
+//void UsbInitialise();
 
 //extern char KeyboardGetChar();
 /*
@@ -156,14 +157,16 @@ void init_clavier()
 
 void kmain( void )
 {
-	led_blink();
+	//led_blink();
 	
 	sched_init(PRIORITY);
 	FramebufferInitialize();
 	
 	UsbInitialise();
-
-	create_process((func_t *)&KeyboardUpdate);
+	//KeyboardBufferInitialize();
+	
+	draw (0, 0, 0);
+	create_process((func_t *)&KeyboardUpdate2, 3);
 
 /*
 	create_process((func_t *)&user_process_1);
@@ -174,16 +177,15 @@ void kmain( void )
 	
 	timer_init();
     ENABLE_IRQ();
-
-	__asm("cps 0x10"); // switch CPU to USER mode
 	
-	draw(0, 0, 0);
-	drawString("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est\n laborum.", 0, 30, 255, 0, 0);
-		
+	__asm("cps 0x10"); // switch CPU to USER mode
+
+	sys_yield();	
 	
 	// **********************************************************************
+	volatile int i=0;
 	while(1)
 	{
-		
+		i++;
 	}
 }
