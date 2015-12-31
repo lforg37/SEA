@@ -143,33 +143,40 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 	page_element* free_list = process->free_list;
 	page_element* occupied_list = process->occupied_list;
 	page_element* current_element;
-    page_element* previous_element = NULL;
+	page_element* previous_element = NULL;
+	uint8_t* adress;
 
-    current_element = free_list;
+	current_element = free_list;
 
 	do {
 		if(current_element->nb_pages >= size) {
-            // assez de pages consécutives
+			// assez de pages consécutives
 
-            insert_list(occupied_list, current_element->adress,
-                    size, false);
+			occupied_list = insert_list(occupied_list, current_element->adress,
+					size, false);
 			
 			if(current_element->nb_pages != size) {
-                // on rabote l'élément       
-
-                current_element->nb_pages -= size;
-                current_element->adress = (uint8_t*)
-                    ((current_element->nb_pages * PAGE_SIZE)
-                    + (uint32_t) current_element->adress);
+				// on rabote l'élément	   
+				
+				printf("%ld\n", current_element->nb_pages);
+				current_element->nb_pages -= size;
+				
+				adress = current_element->adress;
+				current_element->adress = (uint8_t*)
+					((size * PAGE_SIZE)
+					+ (size_t) current_element->adress);
 
 			} else if (previous_element != NULL) {
-                previous_element->next = current_element->next;
-            }
-
-            return current_element->adress;
+				previous_element->next = current_element->next;
+				adress = current_element->adress;
+			}
+			process->occupied_list = occupied_list;
+			process->free_list = free_list;
+			printf("%ld\n", current_element->nb_pages);
+			return current_element->adress;
 		}
 
-        previous_element = current_element;
+		previous_element = current_element;
 		current_element = current_element->next;
 
 	} while(current_element != NULL);
@@ -179,52 +186,88 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 
 // bool merge : vaut vrai lorsqu'on insère dans la free_list
 page_list* insert_list(page_list* list, uint8_t* adress,
-        uint8_t nb_pages, bool merge)
+		uint8_t nb_pages, bool merge)
 {
 	page_element* current = list;
-    page_element* previous = NULL;
+	page_element* previous = NULL;
+
+	bool previous_merge;
 
 	while(current != NULL) {
-        if(adress < current->adress) {
+		previous_merge = false;
 
-            if(merge) {
-                uint8_t* next_adress =
-                    (uint8_t*)((size_t) adress + (PAGE_SIZE * nb_pages));
+		if(adress < current->adress) {
 
-                if(next_adress == current->adress) {
-                    current->adress = adress;
-                    current->nb_pages += nb_pages;
+			if(merge) {
+				
+				uint8_t* next_adress;
 
-                    return list;
-                }
-            }
+				// fusion avec le bloc d'avant ?
+				if(previous != NULL) {
+					next_adress =
+						(uint8_t*)((size_t) adress + (PAGE_SIZE * nb_pages));
 
-            page_element* new_element =
-                    (page_element*) malloc(sizeof(page_element));
-            
-            if(previous != NULL) {
-                previous->next = new_element;
-            }
-            
-            new_element->next = current;
-            new_element->adress = adress;
-            new_element->nb_pages = nb_pages;
+					if(next_adress == adress) {
+						previous->nb_pages += nb_pages;
+						previous_merge = true;
+					}
+				}
 
-            return list;
-        }
+				//fusion avec le bloc d'après ?
+				next_adress =
+					(uint8_t*)((size_t) adress + (PAGE_SIZE * nb_pages));
 
-        previous = current;
-        current = current->next;
-    }
+				if(next_adress == current->adress) {
+					if(!previous_merge) {
+						// fusion avec le bloc d'après uniquement
+						current->adress = adress;
+						current->nb_pages += nb_pages;
+					}
+					else {
+						// fusion avec le bloc d'après et d'avant
+						previous->next = current->next;
+						previous->nb_pages += current->nb_pages;
 
-    // la liste est vide
-    list = (page_element*) malloc(sizeof(page_element));
-    
-    list->next = NULL;
-    list->adress = adress;
-    list->nb_pages = nb_pages;
+						free(current);
+					}
 
-    return list;
+					return list;
+				}
+			}
+
+			page_element* new_element =
+					(page_element*) malloc(sizeof(page_element));
+			
+			if(previous != NULL) {
+				previous->next = new_element;
+			}
+			
+			new_element->next = current;
+			new_element->adress = adress;
+			new_element->nb_pages = nb_pages;
+
+			return list;
+		}
+
+		previous = current;
+		current = current->next;
+	}
+	
+	page_element* last_element = (page_element*) malloc(sizeof(page_element));
+		
+	last_element->next = NULL;
+	last_element->adress = adress;
+	last_element->nb_pages = nb_pages;
+	
+	if(list == NULL) {
+		// la liste est vide
+		list = last_element;
+	}
+	else {
+		previous->next = last_element;
+	}
+
+		return list;
 }
 
 uint32_t init_kern_translation_table(void)
