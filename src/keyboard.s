@@ -2,14 +2,14 @@
 *	keyboard.s
 *	 by Alex Chadwick
 *
-*	A sample assembly code implementation of the input02 operating system.
+*	A sample assembly code implementation of the input01 operating system.
 *	See main.s for details.
 *
 *	keyboard.s contains code to do with the keyboard.
 ******************************************************************************/
 
 .section .data
-/*
+/* NEW
 * The address of the keyboard we're reading from.
 * C++ Signautre: u32 KeyboardAddress;
 */
@@ -17,7 +17,7 @@
 KeyboardAddress:
 	.int 0
 	
-/*
+/* NEW
 * The scan codes that were down before the current set on the keyboard.
 * C++ Signautre: u16* KeyboardOldDown;
 */
@@ -26,50 +26,50 @@ KeyboardOldDown:
 	.hword 0
 	.endr
 	
-/*
+/* NEW
 * KeysNoShift contains the ascii representations of the first 104 scan codes
 * when the shift key is up. Special keys are ignored.
 * C++ Signature: char* KeysNoShift;
 */
 .align 3
 KeysNormal:
-	.byte 0x0, 0x0, 0x0, 0x0, 'a', 'b', 'c', 'd'
+	.byte 0x0, 0x0, 0x0, 0x0, 'q', 'b', 'c', 'd'
 	.byte 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'
-	.byte 'm', 'n', 'o', 'p', 'q', 'r', 's', 't'
-	.byte 'u', 'v', 'w', 'x', 'y', 'z', '1', '2'
-	.byte '3', '4', '5', '6', '7', '8', '9', '0'
-	.byte '\n', 0x0, '\b', '\t', ' ', '-', '=', '['
-	.byte ']', '\\', '#', ';', '\'', '`', ',', '.'
-	.byte '/', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
+	.byte ',', 'n', 'o', 'p', 'a', 'r', 's', 't'
+	.byte 'u', 'v', 'z', 'x', 'y', 'w', '&', 'e'
+	.byte '"', '\'', '(', '-', 'e', '_', 'c', 'a'
+	.byte '\n', 0x0, '\b', '\t', ' ', ')', '=', '^'
+	.byte '$', '<', '*', 'm', '\'', 'u', ';', '.'
+	.byte '!', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 	.byte 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 	.byte 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 	.byte 0x0, 0x0, 0x0, 0x0, '/', '*', '-', '+'
-	.byte '\n', '1', '2', '3', '4', '5', '6', '7'
+	.byte '\n', '&', '2', '3', '4', '5', '6', '7'
 	.byte '8', '9', '0', '.', '\\', 0x0, 0x0, '='
 	
-/*
+/* NEW
 * KeysShift contains the ascii representations of the first 104 scan codes
 * when the shift key is held. Special keys are ignored.
 * C++ Signature: char* KeysShift;
 */
 .align 3
 KeysShift:
-	.byte 0x0, 0x0, 0x0, 0x0, 'A', 'B', 'C', 'D'
+	.byte 0x0, 0x0, 0x0, 0x0, 'Q', 'B', 'C', 'D'
 	.byte 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'
-	.byte 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'
-	.byte 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"'
-	.byte '£', '$', '%', '^', '&', '*', '(', ')'
-	.byte '\n', 0x0, '\b', '\t', ' ', '_', '+', '{'
-	.byte '}', '|', '~', ':', '@', '¬', '<', '>'
-	.byte '?', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
+	.byte '?', 'N', 'O', 'P', 'A', 'R', 'S', 'T'
+	.byte 'U', 'V', 'Z', 'X', 'Y', 'W', '1', '2'
+	.byte 3, '4', '5', '6', '7', '8', '9', '0'
+	.byte '\n', 0x0, '\b', '\t', ' ', '_', '+', 0x0
+	.byte 0x0, '>', 0x0, 'M', '%', 0x0, '.', '/'
+	.byte 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 	.byte 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 	.byte 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
 	.byte 0x0, 0x0, 0x0, 0x0, '/', '*', '-', '+'
 	.byte '\n', '1', '2', '3', '4', '5', '6', '7'
-	.byte '8', '9', '0', '.', '|', 0x0, 0x0, '='
+	.byte '8', '9', '0', ':', '|', 0x0, 0x0, '='
 
 .section .text
-/*
+/* NEW
 * Updates the keyboard pressed and released data.
 * C++ Signature: void KeyboardUpdate();
 */
@@ -124,7 +124,7 @@ return$:
 	pop {r4,r5,pc} 
 	.unreq kbd
 	
-/*
+/* NEW
 * Returns r0=0 if a in r1 key was not pressed before the current scan, and r0
 * not 0 otherwise.
 * C++ Signature bool KeyWasDown(u16 scanCode)
@@ -148,7 +148,7 @@ KeyWasDown:
 	mov r0,#0
 	mov pc,lr
 	
-/*
+/* NEW
 * Returns the ascii character last typed on the keyboard, with r0=0 if no 
 * character was typed.
 * C++ Signature char KeyboardGetChar()
