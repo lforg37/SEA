@@ -32,7 +32,7 @@
 // 
 
 #include "string.h"
-#include <ctype.h>
+#include "ctype.h"
 
 int explode(char **pointers_out, const char *delim, const char *str, char *tmp)
 {
