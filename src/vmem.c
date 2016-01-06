@@ -230,6 +230,8 @@ void free_addr(uint8_t* vAddress, pcb_s* process)
 			
 			list = insert_list(list, vAddress,
 				current_element->nb_pages, true);
+			
+			return;
 		}
 		
 		previous_element = current_element;
