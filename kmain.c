@@ -10,9 +10,19 @@ void test()
 {
 	while(1)
 	{
-		char buffer[10];
-		getLine(buffer);
+		char buffer[10] = "\0";
+		
+		getLine(buffer, 10);
+		draw(0, 0, 0);
 		drawString(buffer, 30, 50, 255, 255, 255);
+	}
+}
+
+void test2()
+{
+	while(1)
+	{
+		draw(255, 0, 0);
 	}
 }
 
@@ -24,8 +34,10 @@ void kmain( void )
 	
 	UsbInitialise();
 	
-	create_process((func_t *)&KeyboardLoop, 3);
+	
+	//create_process((func_t *)&KeyboardLoop, 3);
 	create_process((func_t *)&test, 1);
+	create_process((func_t *)&test2, 1);
 	
 	timer_init();
   	ENABLE_IRQ();

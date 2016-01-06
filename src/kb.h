@@ -6,9 +6,9 @@
 
 void KeyboardLoop();
 
-void getString(char *buffer, char delimiter);
+void getString(char *buffer, int tailleBuf, char delimiter);
 
-void getLine(char *buffer);
+void getLine(char *buffer, int tailleBuf);
 
 void UsbInitialise();
 char KeyboardGetChar();

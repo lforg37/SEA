@@ -221,7 +221,16 @@ void draw(uint8 red, uint8 green, uint8 blue) {
 
 void drawChar(char letter, int x, int y, uint8 red, uint8 green, uint8 blue)
 {
+	if (letter == '\0' || letter == '\n')
+		return;
+		
 	letter -= 32;
+	for (int i = 0 ; i < 13 ; ++i)
+	{
+		for (int j = 0 ; j < 8 ; ++j)
+			put_pixel_RGB24(x + j, y - i, 0, 0, 0);
+	}
+	
 	for (int i = 0 ; i < 13 ; i++)
 	{
 		unsigned char ligne = letters[(int)letter][i];

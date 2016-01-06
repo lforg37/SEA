@@ -9,28 +9,32 @@ void KeyboardLoop()
 	while (1)
 	{
 		KeyboardUpdate();
-		//wait(10);
+		sys_wait(10);
 	}
 }
 
-void getLine(char *buffer)
+void getLine(char *buffer, int tailleBuf)
 {
-	getString(buffer, '\n');
+	getString(buffer, tailleBuf, '\n');
 }
 
-void getString(char *buffer, char delimiter)
+void getString(char *buffer, int tailleBuf, char delimiter)
 {
-	int size = strlen(buffer);
-	if (size == 0) 
+	int i, pos = 0;
+		
+	if (tailleBuf == 0) 
 		return;
 		
+		
 	char c;
-	int i;
-	for (i = 0 ; i < size && buffer[i] != delimiter ; ++i)
+	for (i = 0 ; i < tailleBuf - 1 && buffer[i - 1] != delimiter ; ++i)
 	{
-		c = KeyboardGetChar();
-		while (c != 0)
-			buffer[i] = c;
+		c = 0;
+		while (c == 0)
+		{
+			KeyboardUpdate();
+			addToBuffer(c);
+		}
+		buffer[i] = c;
 	}
-	buffer[i] = '\0';
 }
