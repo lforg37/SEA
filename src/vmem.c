@@ -19,6 +19,7 @@ static page_list* insert_list(page_list* list, uint8_t* adress,
         uint8_t nb_pages, bool merge);
 static uint8_t* get_contiguous_addr(pcb_s* process, size_t size);
 static void free_addr(uint8_t* vAddress, pcb_s* process);
+static void free_all(pcb_s* process);
 
 #ifdef verifINIT
 static uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
@@ -210,6 +211,21 @@ void vmem_free(uint8_t* vAddress, pcb_s* process, size_t size)
 	frame_table[frame_idx / 8] &= 0xFF - (1 << (frame_idx % 8 ));
 	
 	free_addr(vAddress, process);
+}
+
+void free_all(pcb_s* process)
+{
+	page_element* current = process->occupied_list;
+	
+	while(current != NULL) {
+		process->free_list = insert_list(process->free_list,
+			current->address, current->nb_pages, true);
+		kFree((uint8_t*) current, sizeof(page_element));
+		
+		current = current->next;
+	}
+	
+	process->occupied_list = NULL;
 }
 
 void free_addr(uint8_t* vAddress, pcb_s* process)
