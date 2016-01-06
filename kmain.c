@@ -6,6 +6,16 @@
 #include "hw.h"
 #include "fb.h"
 
+void test()
+{
+	while(1)
+	{
+		char buffer[10];
+		getLine(buffer);
+		drawString(buffer, 30, 50, 255, 255, 255);
+	}
+}
+
 void kmain( void )
 {
 	
@@ -15,6 +25,7 @@ void kmain( void )
 	UsbInitialise();
 	
 	create_process((func_t *)&KeyboardLoop, 3);
+	create_process((func_t *)&test, 1);
 	
 	timer_init();
   	ENABLE_IRQ();
