@@ -199,8 +199,30 @@ vmem_free(uint8_t* vAddress, pcb_t* process, size_t size)
 
 	uint32_t frame_idx = frame_addr / PAGE_SIZE;	
 	frame_table[frame_idx / 8] &= 0xFF - (1 << (frame_idx % 8 ));
+	
+	
 }
 
+void free_addr(uint8_t* vAddress, pcb_s* process)
+{
+	page_list* list = process->process->occupied_list
+	page_element* current_element = list;
+	
+	while(current_element != NULL)
+	{
+		if(current_element->address == vAddress) {
+			//current_element
+		}
+		
+		current_element = current_element->next;
+	}
+	
+	if(list == NULL) {
+		//ce n'est pas normal
+		return;
+	}
+	
+}
 
 // size_t size : taille en nombre de page
 uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
@@ -216,7 +238,7 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 		if(current_element->nb_pages >= size) {
 			// assez de pages consécutives
 
-			occupied_list = insert_list(occupied_list, current_element->adress,
+			occupied_list = insert_list(occupied_list, current_element->address,
 					size, false);
 			
 			if(current_element->nb_pages != size) {
@@ -224,9 +246,9 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 				// on rabote l'élément	   
 				current_element->nb_pages -= size;
 				
-				current_element->adress = (uint8_t*)
+				current_element->address = (uint8_t*)
 					((size * PAGE_SIZE)
-					+ (size_t) current_element->adress);
+					+ (size_t) current_element->address);
 
 			} else if (previous_element != NULL) {
 				previous_element->next = current_element->next;
@@ -234,7 +256,7 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 			process->occupied_list = occupied_list;
 			process->free_list = free_list;
 
-			return current_element->adress;
+			return current_element->address;
 		}
 
 		previous_element = current_element;
@@ -246,7 +268,7 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 }
 
 // bool merge : vaut vrai lorsqu'on insère dans la free_list
-page_list* insert_list(page_list* list, uint8_t* adress,
+page_list* insert_list(page_list* list, uint8_t* address,
 		uint8_t nb_pages, bool merge)
 {
 	page_element* current = list;
@@ -257,31 +279,31 @@ page_list* insert_list(page_list* list, uint8_t* adress,
 	while(current != NULL) {
 		previous_merge = false;
 
-		if(adress < current->adress) {
+		if(address < current->address) {
 
 			if(merge) {
 				
-				uint8_t* next_adress;
+				uint8_t* next_address;
 
 				// fusion avec le bloc d'avant ?
 				if(previous != NULL) {
-					next_adress =
-						(uint8_t*)((size_t) adress + (PAGE_SIZE * nb_pages));
+					next_address =
+						(uint8_t*)((size_t) address + (PAGE_SIZE * nb_pages));
 
-					if(next_adress == adress) {
+					if(next_address == address) {
 						previous->nb_pages += nb_pages;
 						previous_merge = true;
 					}
 				}
 
 				//fusion avec le bloc d'après ?
-				next_adress =
-					(uint8_t*)((size_t) adress + (PAGE_SIZE * nb_pages));
+				next_address =
+					(uint8_t*)((size_t) address + (PAGE_SIZE * nb_pages));
 
-				if(next_adress == current->adress) {
+				if(next_address == current->address) {
 					if(!previous_merge) {
 						// fusion avec le bloc d'après uniquement
-						current->adress = adress;
+						current->address = address;
 						current->nb_pages += nb_pages;
 					}
 					else {
@@ -304,7 +326,7 @@ page_list* insert_list(page_list* list, uint8_t* adress,
 			}
 			
 			new_element->next = current;
-			new_element->adress = adress;
+			new_element->address = address;
 			new_element->nb_pages = nb_pages;
 
 			return list;
@@ -317,7 +339,7 @@ page_list* insert_list(page_list* list, uint8_t* adress,
 	page_element* last_element = (page_element*) kAlloc(sizeof(page_element));
 		
 	last_element->next = NULL;
-	last_element->adress = adress;
+	last_element->address = address;
 	last_element->nb_pages = nb_pages;
 	
 	if(list == NULL) {
