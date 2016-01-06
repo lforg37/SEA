@@ -57,4 +57,7 @@ void draw(uint8 red, uint8 green, uint8 blue);
 void drawChar(char letter, int x, int y, uint8 red, uint8 green, uint8 blue);
 void drawString(char *string, int x, int y, uint8 red, uint8 green, uint8 blue);
 
+int fillBuffer(char *string, char** bufferScreen, int bufferHeight, int bufferWidth, int bufferFill);
+void drawBuffer(int x, int y, uint8 red, uint8 green, uint8 blue, char** bufferScreen, int bufferHeight, int bufferWidth, int bufferFill);
+
 #endif

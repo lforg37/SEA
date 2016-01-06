@@ -5,8 +5,15 @@
  */
 static uint32 fb_address;
 static uint32 fb_size_bytes;
-static uint32 fb_x,fb_y,pitch,depth;
+uint32 fb_x,fb_y,pitch,depth;
 
+#define BUFFER_HEIGHT 10
+#define BUFFER_WIDTH fb_x/8 - 20
+//Globals au programme
+
+static int g_iCol;
+static int g_iLin;
+static char g_bufferScreen[BUFFER_HEIGHT + 1][BUFFER_WIDTH];
 
 /*
  * Fonction pour lire et écrire dans les mailboxs
@@ -284,5 +291,122 @@ void drawString(char *string, int x, int y, uint8 red, uint8 green, uint8 blue)
 		if (y > fb_y)//Si on depasse la hauteur de l'écran, on arrète d'écrire le texte
 			return;
 		i++;
+	}
+}
+
+int fillBuffer(char *string, char** bufferScreen, int bufferHeight, int bufferWidth, int bufferFill)
+{	
+	int i = 0, oldSize;
+	int startLine = 0, sizeLine = 0;
+	int oldI = 0;
+	while (string[i] != '\0') //Parcours du texte
+	{
+		short sautLigne = 0;
+		oldI = i;
+		oldSize = sizeLine;
+		
+		while (string[i] != ' ' && string[i] != '\0' && !sautLigne) //Recherche du prochain mot
+		{
+			if (string[i] == '\n' && sizeLine <= bufferWidth) //Si on doit sauter à la ligne
+				sautLigne = 1;
+			else
+				sizeLine++;
+			i++;
+		}
+		sizeLine++;
+			
+		if (sizeLine >= bufferWidth || sautLigne || string[i] == '\0')//Si on dépasse la largeur de l'écran ou s'il y a un \n, on va à la ligne...
+		{
+			if (sizeLine >= bufferWidth)
+			{
+				i = oldI;
+				sizeLine  = oldSize;
+			}
+			
+			int iBuffer = 0;
+			while (iBuffer < sizeLine)
+			{
+				//drawChar(string[startLine + iBuffer], x + iBuffer * 8, y, red, green, blue);
+				
+				bufferScreen[bufferFill][iBuffer] = string[startLine + iBuffer];
+				
+				iBuffer++;
+			}
+			bufferFill++;
+			
+			startLine = i;
+			sizeLine = 0;
+		}
+		
+		if(bufferFill > bufferSize)
+		{
+			int j;
+			for(j = 0; j < bufferSize; j++)
+			{
+				bufferScreen[j] = bufferScreen[j+1];
+			}
+			bufferFill--;			
+		}	
+		
+		/*if (y > fb_y)//Si on depasse la hauteur de l'écran, on arrète d'écrire le texte
+			return;*/
+		i++;
+	}
+	return bufferFill;
+}
+
+	
+void drawBuffer(int x, int y, uint8 red, uint8 green, uint8 blue, char** bufferScreen, int bufferWidth, int bufferFill)
+{
+	int iBuffer;
+	int iString;
+	
+	draw(0, 0, 0);
+	for (iBuffer = 0 ; iBuffer < bufferFill ; iBuffer++)
+	{
+		for (iString = 0 ; iString < bufferWidth ; iString++)
+		{
+			drawChar(bufferScreen[iBuffer][iString], x + iString * 8, y, red, green, blue);
+		}
+		y += 16;
+	}
+}
+
+void addToBuffer(char c)
+{
+	int drawAll = 0;
+	
+	if (g_iCol +1 > BUFFER_WIDTH || c == '\n')
+	{
+		g_iLin++;
+		g_iCol = 0;
+	}
+	
+	if (g_iLin > BUFFER_HEIGHT)
+	{
+		int j;
+		for(j = 0; j < g_iLin - 1; j++)
+		{
+			g_bufferScreen[j] = g_bufferScreen[j+1];
+		}
+		drawAll = 1;
+	}
+	if (c != '\n')
+	{
+		g_bufferScreen[g_iLin][g_iCol] = c;
+	}
+	
+	if (drawAll == 1)
+		drawBuffer(10, 10, 255, 255, 255, g_bufferScreen, BUFFER_WIDTH, g_iLin);
+	else
+		drawChar(g_bufferScreen[g_iLin][g_iCol], 10 + g_iCol * 8, 10 + g_iLin * 16, 255, 255, 255);
+}
+
+void printf(char * string)
+{
+	int size = strlen(string);
+	for (int i = 0 ; i< size ; i++)
+	{
+		addToBuffer(string[i]);
 	}
 }
