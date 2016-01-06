@@ -61,6 +61,14 @@ void init_pcb_table(pcb_s *pcb)
 	for (cur_frame_idx = 0 ; cur_frame_idx < nb_pages_code ; cur_frame_idx++) {
 		map_table(pcb, (uint32_t*) (cur_frame_idx * PAGE_SIZE), cur_frame_idx * PAGE_SIZE);
 	}
+
+	page_element* free_list = (page_element*) kAlloc(sizeof(page_element));
+	free_list->address = &__kernel_heap_start__;
+	free_list->size = &__kernel_heap_end__ - &__kernel_heap_start__ + 1;
+	free_list->next = NULL;
+
+	pcb->free_list = free_list;
+	pcb->occupied_list = NULL;
 }
 
 static void configure_mmu_c(void)
@@ -164,7 +172,7 @@ uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
 	return page_start;
 }
 
-vmem_free(uint8_t* vAddress, pcb_t* process, size_t size) 
+void vmem_free(uint8_t* vAddress, pcb_t* process, size_t size) 
 {
 	uint32_t* addr_ptr = (uint32_t*)( process->page_table_addr + 
 		process_addr/(PAGE_SIZE * SECON_LVL_TT_COUN));

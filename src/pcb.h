@@ -14,7 +14,6 @@ typedef struct page_element
 	uint8_t* address;
 	size_t nb_pages;
 	struct page_element* next;
-
 } page_element;
 
 typedef struct pcb_s
@@ -34,7 +33,5 @@ typedef struct pcb_s
 	page_element* free_list;
 	page_element* occupied_list;
 	uint8_t* page_table_addr;
-	uint32_t* heap_base;
-	uint32_t* heap_top;
 } pcb_s;
 #endif
