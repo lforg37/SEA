@@ -20,7 +20,7 @@ void bash_process()
 	char buffer[BUFFER_CMD] = "lorem";
 	while (1)
 	{
-		//getString(buffer, BUFFER_CMD);
+		getLine(buffer, BUFFER_CMD);
 		
 		char item_bytes[BUFFER_CMD];
 		char *cmdExploded[BUFFER_CMD];
@@ -29,7 +29,7 @@ void bash_process()
 		if (strcmp (cmdExploded[0], "hello") == 0)
 			doHello(size, cmdExploded);
 		if (strcmp (cmdExploded[0], "lorem") == 0)
-			bufferFill = doLorem(size, cmdExploded);
+			doLorem(size, cmdExploded);
 		if (strcmp (cmdExploded[0], "clear") == 0)
 			doClear(size, cmdExploded);
 		buffer[0] = '\0';

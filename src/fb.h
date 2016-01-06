@@ -1,6 +1,10 @@
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
 #include <stdint.h>
+
+
+#define BUFFER_HEIGHT 10
+#define BUFFER_WIDTH 1000
 /*
  * Explication des adresses, offsets, channels, etc: http://elinux.org/RPi_Framebuffer
  * Intro au framebuffer: http://magicsmoke.co.za/?p=284
@@ -21,6 +25,8 @@ enum {
     MAILBOX_CONFIGURATION   = 0x2000B89C,    // Settings.	 RW
     MAILBOX_WRITE           = 0x2000B8A0     // Sending mail.	 W
 };
+
+
 
 void MailboxWrite(uint32 message, uint32 mailbox);
 uint32 MailboxRead(uint32 mailbox);
@@ -57,8 +63,8 @@ void draw(uint8 red, uint8 green, uint8 blue);
 void drawChar(char letter, int x, int y, uint8 red, uint8 green, uint8 blue);
 void drawString(char *string, int x, int y, uint8 red, uint8 green, uint8 blue);
 
-int fillBuffer(char *string, char** bufferScreen, int bufferHeight, int bufferWidth, int bufferFill);
-void drawBuffer(int x, int y, uint8 red, uint8 green, uint8 blue, char** bufferScreen, int bufferHeight, int bufferWidth, int bufferFill);
+void drawBuffer(int x, int y, uint8 red, uint8 green, uint8 blue, int bufferFill);
+
 
 void addToBuffer(char c);
 void printf(char * string);
