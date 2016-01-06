@@ -215,18 +215,29 @@ void free_addr(uint8_t* vAddress, pcb_s* process)
 {
 	page_list* list = process->occupied_list;
 	page_element* current_element = list;
+	page_element* previous_element = NULL;
 	
 	while(current_element != NULL)
 	{
 		if(current_element->address == vAddress) {
-			//current_element
+			
+			if(previous_element == NULL) {
+				list = current_element->next;
+			}
+			else {
+				previous_element->next = current_element->next;
+			}
+			
+			list = insert_list(list, vAddress,
+				current_element->nb_pages, true);
 		}
 		
+		previous_element = current_element;
 		current_element = current_element->next;
 	}
 	
 	if(list == NULL) {
-		//ce n'est pas normal
+		// la liste est vide, rien d'alloué
 		return;
 	}
 	
