@@ -18,6 +18,7 @@ static void map_table(pcb_s* process, uint32_t* frame_addr, uint32_t process_add
 static page_list* insert_list(page_list* list, uint8_t* adress,
         uint8_t nb_pages, bool merge);
 static uint8_t* get_contiguous_addr(pcb_s* process, size_t size);
+static void free_addr(uint8_t* vAddress, pcb_s* process);
 
 #ifdef verifINIT
 static uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
@@ -208,28 +209,29 @@ void vmem_free(uint8_t* vAddress, pcb_s* process, size_t size)
 	uint32_t frame_idx = frame_addr / PAGE_SIZE;	
 	frame_table[frame_idx / 8] &= 0xFF - (1 << (frame_idx % 8 ));
 	
-	
+	free_addr(vAddress, process);
 }
 
 void free_addr(uint8_t* vAddress, pcb_s* process)
 {
-	page_list* list = process->occupied_list;
-	page_element* current_element = list;
+	page_list* occupied_list = process->occupied_list;
+	page_list* free_list = process->free_list;
+	page_element* current_element = occupied_list;
 	page_element* previous_element = NULL;
 	
 	while(current_element != NULL)
 	{
 		if(current_element->address == vAddress) {
 			
+			process->free_list = insert_list(free_list, vAddress,
+				current_element->nb_pages, true);
+			
 			if(previous_element == NULL) {
-				list = current_element->next;
+				process->occupied_list = current_element->next;
 			}
 			else {
 				previous_element->next = current_element->next;
 			}
-			
-			list = insert_list(list, vAddress,
-				current_element->nb_pages, true);
 			
 			return;
 		}
@@ -238,7 +240,7 @@ void free_addr(uint8_t* vAddress, pcb_s* process)
 		current_element = current_element->next;
 	}
 	
-	if(list == NULL) {
+	if(occupied_list == NULL) {
 		// la liste est vide, rien d'alloué
 		return;
 	}
@@ -256,13 +258,13 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 	current_element = free_list;
 
 	do {
-		if(current_element->nb_pages >= size) {
+		if (current_element->nb_pages >= size) {
 			// assez de pages consécutives
 
 			occupied_list = insert_list(occupied_list, current_element->address,
 					size, false);
-			
-			if(current_element->nb_pages != size) {
+					
+			if (current_element->nb_pages != size) {
 				
 				// on rabote l'élément	   
 				current_element->nb_pages -= size;
@@ -272,7 +274,13 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 					+ (size_t) current_element->address);
 
 			} else if (previous_element != NULL) {
+				
 				previous_element->next = current_element->next;
+				
+			} else if (previous_element == NULL) {
+				process->free_list = NULL;
+				
+				return current_element->address;
 			}
 			process->occupied_list = occupied_list;
 			process->free_list = free_list;
@@ -309,7 +317,8 @@ page_list* insert_list(page_list* list, uint8_t* address,
 				// fusion avec le bloc d'avant ?
 				if(previous != NULL) {
 					next_address =
-						(uint8_t*)((size_t) address + (PAGE_SIZE * nb_pages));
+						(uint8_t*)((size_t) previous->address +
+						(PAGE_SIZE * previous->nb_pages));
 
 					if(next_address == address) {
 						previous->nb_pages += nb_pages;
@@ -336,6 +345,8 @@ page_list* insert_list(page_list* list, uint8_t* address,
 					}
 
 					return list;
+				} else if(previous_merge) {
+					return list;
 				}
 			}
 
@@ -344,6 +355,8 @@ page_list* insert_list(page_list* list, uint8_t* address,
 			
 			if(previous != NULL) {
 				previous->next = new_element;
+			} else {
+				list = new_element;
 			}
 			
 			new_element->next = current;
@@ -371,7 +384,7 @@ page_list* insert_list(page_list* list, uint8_t* address,
 		previous->next = last_element;
 	}
 
-		return list;
+	return list;
 }
 
 uint32_t init_kern_translation_table(void)
