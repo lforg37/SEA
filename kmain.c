@@ -1,50 +1,52 @@
 #include "util.h"
 #include "syscall.h"
 #include "sched.h"
+#include "stdint.h"
+#include "kb.h"
+#include "hw.h"
+#include "fb.h"
 
-void user_process_1()
+void test()
 {
-	int v1 = 5;
 	while(1)
 	{
-		v1++;
+		char buffer[10] = "\0";
+		
+		getLine(buffer, 10);
+		draw(0, 0, 0);
+		drawString(buffer, 30, 50, 255, 255, 255);
 	}
 }
 
-void user_process_2()
+void test2()
 {
-	int v2 = -12;
 	while(1)
 	{
-		v2 -= 2;
-		sys_wait(30);
-	}
-}
-
-void user_process_3() 
-{
-	int v3 = 0;
-	while(1)
-	{
-		v3 += 5;
+		draw(255, 0, 0);
 	}
 }
 
 void kmain( void )
 {
-	sched_init(PRIORITY);
 	
-	create_process((func_t *)&user_process_1, 3);
- 	create_process((func_t *)&user_process_2, 3);
+	sched_init(PRIORITY);
+	FramebufferInitialize();
+	
+	UsbInitialise();
+	
+	
+	//create_process((func_t *)&KeyboardLoop, 3);
+	create_process((func_t *)&test, 1);
+	create_process((func_t *)&test2, 1);
 	
 	timer_init();
-    ENABLE_IRQ();
+  	ENABLE_IRQ();
 
-	__asm("cps 0x10"); // switch CPU to USER mode
+	__asm("cps 0x10"); // switch CPU to USER mode	
 	
 	// **********************************************************************
 	while(1)
 	{
-		sys_yield();
+		sys_yield();		
 	}
 }
