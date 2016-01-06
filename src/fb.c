@@ -8,8 +8,8 @@ static uint32 fb_address;
 static uint32 fb_size_bytes;
 //Globals au programme
 
-static int g_iCol;
-static int g_iLin;
+static int g_iCol = 0;
+static int g_iLin = 0;
 static char g_bufferScreen[BUFFER_HEIGHT][BUFFER_WIDTH];
 static uint32 fb_x,fb_y,pitch,depth;
 

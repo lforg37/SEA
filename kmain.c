@@ -11,6 +11,8 @@ void kmain( void )
 	sched_init(PRIORITY);
 	FramebufferInitialize();
 	
+	UsbInitialise();
+	
 	create_process((func_t *)&bash_process, 3);
 	
 	timer_init();

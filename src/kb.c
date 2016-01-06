@@ -11,7 +11,7 @@ void getLine(char *buffer, int tailleBuf)
 
 void getString(char *buffer, int tailleBuf, char delimiter)
 {
-	int i;
+	int i, pos = 10;
 		
 	if (tailleBuf == 0) 
 		return;
@@ -24,8 +24,11 @@ void getString(char *buffer, int tailleBuf, char delimiter)
 		while (c == 0)
 		{
 			KeyboardUpdate();
-			addToBuffer(c);
+			c = KeyboardGetChar();	
 		}
+		addToBuffer(c);
+		drawChar(c, pos, 200, 255, 255, 0);
+		pos += 13;
 		buffer[i] = c;
 	}
 }
