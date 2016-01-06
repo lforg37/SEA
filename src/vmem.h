@@ -15,18 +15,14 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-
-typedef struct page_element
-{
-	uint8_t* adress;
-	size_t nb_pages;
-	struct page_element* next;
-
-} page_element;
+#include "pcb.h"
+#include "sched.h"
 
 typedef page_element page_list;
 
 uint32_t init_kern_translation_table(void);
 void vmem_init(void);
+struct pcb_s;
+void init_pcb_table(pcb_s * pcb);
 
 #endif

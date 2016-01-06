@@ -13,6 +13,7 @@ static uint32_t mmu_base;
 static void init_frame_table();
 static uint8_t* frame_table;
 static uint16_t idx_last_frame_allocated;
+static void map_table(pcb_s* process, uint32_t* frame_addr, uint32_t process_addr);
 
 static page_list* insert_list(page_list* list, uint8_t* adress,
         uint8_t nb_pages, bool merge);
@@ -48,6 +49,18 @@ static void start_mmu_c(void)
 
 	/*Écriture du registre de contrôle*/
 	__asm__ volatile("mcr p15, 0, %[control], c1, c0, 0" :: [control]"r"(control));
+}
+
+void init_pcb_table(pcb_s *pcb)
+{
+	uint8_t* pcb_table = kAlloc_aligned(FIRST_LVL_TT_SIZE, FIRST_LVL_INDEX_WIDTH);
+	size_t nb_pages_code = (((uint32_t)&__kernel_heap_start__) - 1) / PAGE_SIZE + 1;	
+	pcb->page_table_addr = pcb_table;	
+
+	size_t cur_frame_idx;
+	for (cur_frame_idx = 0 ; cur_frame_idx < nb_pages_code ; cur_frame_idx++) {
+		map_table(pcb, (uint32_t*) (cur_frame_idx * PAGE_SIZE), cur_frame_idx * PAGE_SIZE);
+	}
 }
 
 static void configure_mmu_c(void)
@@ -107,13 +120,27 @@ static uint32_t* get_free_frame()
 	return (uint32_t *) address;	
 }
 
-static void map_table(pcb_s* process, uint32_t frame_idx, uint32_t process_addr)
+static void map_table(pcb_s* process, uint32_t* frame_addr, uint32_t process_addr)
 {
-	uint32_t* addr_ptr = process->page_table_addr + process_addr/(PAGE_SIZE * SECON_LVL_TT_COUN);
-	if(*)
+	uint32_t* addr_ptr = (uint32_t*)( process->page_table_addr + 
+		process_addr/(PAGE_SIZE * SECON_LVL_TT_COUN));
+	uint8_t* second_lvl_tt;
+	if((*addr_ptr & 0x00000003) == 0)
 	{
+		second_lvl_tt = kAlloc_aligned(SECON_LVL_TT_SIZE,
+				SECON_LVL_INDEX_WIDTH);
 
+		*addr_ptr = ((uint32_t)second_lvl_tt & 0xFFFFFC00) + 1;
+	} else {
+		second_lvl_tt = (uint8_t*) (*addr_ptr & 0xFFFFFC00);
 	}
+	
+	uint32_t* frame_entry = (uint32_t*) (second_lvl_tt + 
+		(
+		 (process_addr >> 10) & 0x000003FF
+		));
+
+	*frame_entry = ((uint32_t) frame_addr & 0xFFFFF000 ) + 0x0000044E;
 }
 
 uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
@@ -131,11 +158,49 @@ uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
 	{
 		frame = get_free_frame();
 		map_table(process, frame, page_addr);	
-		page_addr += page_size;
+		page_addr += PAGE_SIZE;
 	}
 
 	return page_start;
 }
+
+vmem_free(uint8_t* vAddress, pcb_t* process, size_t size) 
+{
+	uint32_t* addr_ptr = (uint32_t*)( process->page_table_addr + 
+		process_addr/(PAGE_SIZE * SECON_LVL_TT_COUN));
+	
+	uint32_t* second_lvl_tt = (uint32_t*) (*addr_ptr & 0xFFFFFC00);
+
+	uint32_t* frame_entry = (uint32_t*) ((uint32_t) second_lvl_tt + 
+		(
+		 ((uint32_t) vAddress >> 10) & 0x000003FF
+		));
+	
+	uint32_t frame_addr = *frame_entry & 0xFFFFF000;
+	//Effacement de l'entrée
+	*frame_entry = 0;
+	
+	uint32_t* second_lvl_iter;
+	size_t non_empty = 0;
+	for( 	second_lvl_iter = second_lvl_tt ; 
+			second_lvl_iter < second_lvl_tt + SECON_LVL_TT_COUN ;
+			second_lvl_iter++) {
+		if (*second_lvl_iter != 0) {
+			non_empty++;
+			break;
+		}
+	}
+	
+	if (non_empty == 0) {
+		//On supprime aussi la table
+		*addr_ptr = 0;
+		kFree((uint8_t*) second_lvl_tt, SECON_LVL_TT_SIZE);
+	} 
+
+	uint32_t frame_idx = frame_addr / PAGE_SIZE;	
+	frame_table[frame_idx / 8] &= 0xFF - (1 << (frame_idx % 8 ));
+}
+
 
 // size_t size : taille en nombre de page
 uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
@@ -144,7 +209,6 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 	page_element* occupied_list = process->occupied_list;
 	page_element* current_element;
 	page_element* previous_element = NULL;
-	uint8_t* adress;
 
 	current_element = free_list;
 
@@ -156,23 +220,20 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 					size, false);
 			
 			if(current_element->nb_pages != size) {
-				// on rabote l'élément	   
 				
-				printf("%ld\n", current_element->nb_pages);
+				// on rabote l'élément	   
 				current_element->nb_pages -= size;
 				
-				adress = current_element->adress;
 				current_element->adress = (uint8_t*)
 					((size * PAGE_SIZE)
 					+ (size_t) current_element->adress);
 
 			} else if (previous_element != NULL) {
 				previous_element->next = current_element->next;
-				adress = current_element->adress;
 			}
 			process->occupied_list = occupied_list;
 			process->free_list = free_list;
-			printf("%ld\n", current_element->nb_pages);
+
 			return current_element->adress;
 		}
 
@@ -228,7 +289,7 @@ page_list* insert_list(page_list* list, uint8_t* adress,
 						previous->next = current->next;
 						previous->nb_pages += current->nb_pages;
 
-						free(current);
+						kFree((uint8_t*) current, sizeof(page_element));
 					}
 
 					return list;
@@ -236,7 +297,7 @@ page_list* insert_list(page_list* list, uint8_t* adress,
 			}
 
 			page_element* new_element =
-					(page_element*) malloc(sizeof(page_element));
+					(page_element*) kAlloc(sizeof(page_element));
 			
 			if(previous != NULL) {
 				previous->next = new_element;
@@ -253,7 +314,7 @@ page_list* insert_list(page_list* list, uint8_t* adress,
 		current = current->next;
 	}
 	
-	page_element* last_element = (page_element*) malloc(sizeof(page_element));
+	page_element* last_element = (page_element*) kAlloc(sizeof(page_element));
 		
 	last_element->next = NULL;
 	last_element->adress = adress;
@@ -287,9 +348,9 @@ uint32_t init_kern_translation_table(void)
 
 	uint32_t flag = 0;
 	uint32_t virtual_addr_lvl_2;
-	uint32_t test = FIRST_LVL_START(0xFFFFFFFF);
+
 	for (virtual_addr = 0 ;
-			virtual_addr < test ;
+			virtual_addr <  FIRST_LVL_START(0xFFFFFFFF);
 			virtual_addr += SECON_LVL_TT_COUN * PAGE_SIZE
 		) {
 		if (virtual_addr <= FIRST_LVL_START((uint32_t) (&__kernel_heap_end__))) {
@@ -347,7 +408,7 @@ static void init_frame_table()
 {
 	size_t nb_frames = IO_START / (PAGE_SIZE * 8);
 	frame_table = (uint8_t*) kAlloc(nb_frames/8);
-	(uint8_t*) frame_table_ptr = frame_table;
+	uint8_t* frame_table_ptr = frame_table;
 	size_t i;
 	for(i = 0 ; i < nb_frames ; i++)
 	{

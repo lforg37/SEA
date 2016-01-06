@@ -3,7 +3,6 @@
 #include "vmem.h"
 
 #define STACK_SIZE 10240
-#define NULL 0
 
 extern uint32_t * g_spArg;
 
@@ -48,6 +47,7 @@ pcb_s *create_process(func_t* entry, int priority)
 	newPcb->lr_svc = (int32_t)&start_current_process;
 	newPcb->state = READY;
 	newPcb->wakingTime = 0;
+	init_pcb_table(newPcb);
 	
 	insertInList(&g_ready_processes, newPcb, 1);
 
