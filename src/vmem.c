@@ -213,7 +213,7 @@ void vmem_free(uint8_t* vAddress, pcb_s* process, size_t size)
 
 void free_addr(uint8_t* vAddress, pcb_s* process)
 {
-	page_list* list = process->occupied_list
+	page_list* list = process->occupied_list;
 	page_element* current_element = list;
 	
 	while(current_element != NULL)
