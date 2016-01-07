@@ -40,8 +40,7 @@ pcb_s *create_process(func_t* entry, int priority)
 {
 	pcb_s * newPcb = (pcb_s*) kAlloc(sizeof(pcb_s));
 	newPcb->lr_user = (int32_t)entry;
-	newPcb->stack = (uint32_t *)kAlloc(STACK_SIZE);
-	newPcb->sp = newPcb->stack + STACK_SIZE/4;
+	newPcb->r[7] = newPcb->lr_user;
 	newPcb->CPSR_user = 0x60000150;
 	newPcb->priority = priority;
 	newPcb->lr_svc = (int32_t)&start_current_process;
@@ -71,6 +70,8 @@ void do_sys_exit()
 
 	if (processToDelete != &g_kmain_process)
 	{
+		free_all(processToDelete);
+		clean_stack(processToDelete);
 		kFree((void *)processToDelete, STACK_SIZE);
 		kFree((void *)processToDelete, sizeof(pcb_s));
 	}
@@ -113,7 +114,7 @@ void do_sys_yieldto()
 		g_current_process->state = READY;
 		insertInList(&g_ready_processes, g_current_process, 1);
 	}
-	dest->state = RUNNING; 
+	dest->state = RUNNING;
 	removeFromList(&g_ready_processes, dest);
 	
 	g_current_process->CPSR_user = g_spArg[0];
@@ -267,18 +268,24 @@ void sched_init(scheduler s)
 	g_kmain_process.priority = 0;
 	g_kmain_process.state = RUNNING;
 
+	extern uint32_t mmu_base;
+	g_kmain_process.page_table_addr = (uint32_t*) mmu_base;
+
 	g_current_process = &g_kmain_process;
 	g_current_process->next_process = NULL;
 	g_current_process->prev_process = NULL;
 	g_ready_processes = NULL;
 	g_waiting_processes = NULL;
+
 	
 	g_dateForWaitingProcess = 0;
 }
 
 void start_current_process()
 {
-	((func_t *)g_current_process->lr_user)();
+	uint32_t entry;
+	__asm__ volatile("mov %[entry], r7" : [entry]"=r"(entry));
+	((func_t*) entry)();
 	sys_exit();
 }
 

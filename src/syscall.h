@@ -2,10 +2,20 @@
 #define SYS_CALL_H
 
 #include <stdint.h>
+#include "types.h"
 
 enum action
 {
-	DEFAULT, REBOOT, NOP, SETTIME, GETTIME, YIELDTO, SYS_EXIT, WAIT
+	DEFAULT, 
+	REBOOT, 
+	NOP, 
+	SETTIME, 
+	GETTIME, 
+	YIELDTO, 
+	SYS_EXIT, 
+	WAIT,
+	MMAP,
+	MUMAP
 };
 
 //Handler pour les changements de mode 
@@ -13,6 +23,12 @@ void __attribute__((naked)) swi_handler(void);
 
 //Retourne l'heure du système (Retourne une constante avec l'émulateur)
 uint64_t sys_gettime();
+
+//Récupérer un pointeur sur une zone de size octets contigus;
+void* sys_mmap(size_t size); 
+
+//Détacher size nombre de page à partir de l'adresse addresse
+void sys_munmap(void* addr, size_t size);
 
 //Inutile
 void sys_nop();

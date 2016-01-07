@@ -14,7 +14,6 @@
 #define FIRST_LVL_START(ADDR) (ADDR & (0xFFFFFFFF - (1 << FIRST_LVL_BITSHIFT) +1))
 
 #include <stdint.h>
-#include <stdlib.h>
 #include "pcb.h"
 #include "sched.h"
 
@@ -22,7 +21,13 @@ typedef page_element page_list;
 
 uint32_t init_kern_translation_table(void);
 void vmem_init(void);
+uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size);
+void vmem_free(uint8_t* vAddress, pcb_s* process, size_t size);
 struct pcb_s;
 void init_pcb_table(pcb_s * pcb);
+void clean_stack(pcb_s *pcb);
+void handle_vmem(pcb_s* pcb);
+void switch_os(void);
+void free_all(pcb_s* process);
 
 #endif

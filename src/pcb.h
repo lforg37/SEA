@@ -1,8 +1,8 @@
 #ifndef PCB_H
 #define PCB_H
 
-#include <stdlib.h>
 #include <stdint.h>
+#include "types.h"
 
 typedef enum process_state
 {
@@ -21,7 +21,7 @@ typedef struct pcb_s
 	uint32_t r[13];
 	uint32_t lr_svc;
 	uint32_t lr_user;
-	uint32_t* stack;
+	//uint32_t* stack;
 	uint32_t* sp;
 	uint32_t CPSR_user;
 	uint32_t priority;
@@ -32,6 +32,6 @@ typedef struct pcb_s
 
 	page_element* free_list;
 	page_element* occupied_list;
-	uint8_t* page_table_addr;
+	uint32_t* page_table_addr;
 } pcb_s;
 #endif

@@ -8,8 +8,11 @@
 #define IO_START 0x20000000
 #define idx_first_ram_page 0x200
 #define idx_last_ram_page 0x3FFF
+#define NB_FRAME_STACK 10
+#define STACK_START 0xFFFFFFFF
 
-static uint32_t mmu_base;
+
+uint32_t mmu_base;
 static void init_frame_table();
 static uint8_t* frame_table;
 static uint16_t idx_last_frame_allocated;
@@ -19,16 +22,36 @@ static page_list* insert_list(page_list* list, uint8_t* adress,
         uint8_t nb_pages, bool merge);
 static uint8_t* get_contiguous_addr(pcb_s* process, size_t size);
 static void free_addr(uint8_t* vAddress, pcb_s* process);
-static void free_all(pcb_s* process);
+static uint32_t* get_free_frame();
 
 #ifdef verifINIT
-static uint32_t vmem_translate(uint32_t va, struct pcb_s* process);
+static uint32_t vmem_translate(uint32_t va, pcb_s* process);
 static void verify_init();
+static void verify_process_table(pcb_s *pcb);
 #endif
 
 static bool is_init_addr(uint32_t addr)
 {
 	return (addr <= (uint32_t) &__kernel_heap_end__)|| ((addr & 0xFF000000) == DEV_ADDR_FLAG );
+}
+
+void data_handler()
+{
+	uint32_t DFSR;
+	__asm__ volatile("MCR p15, 0, r3, c5, c0, 0");
+	__asm__ volatile("mov %[dfsr], r3" : [dfsr] "=r"(DFSR));
+
+	uint32_t FAR; // adresse virtuelle responsable de la faute
+	__asm__ volatile("MCR p15, 0, r3, c6, c0, 0");
+	__asm__ volatile("mov %[far], r3" : [far] "=r"(FAR));
+
+	kernel_panic("DATA ABORT", FAR);
+}
+
+void clean_stack(pcb_s *pcb)
+{
+	uint32_t addr = STACK_START - NB_FRAME_STACK * PAGE_SIZE + 1;
+	vmem_free((uint8_t*) addr, pcb, NB_FRAME_STACK);
 }
 
 static void start_mmu_c(void)
@@ -55,7 +78,7 @@ static void start_mmu_c(void)
 
 void init_pcb_table(pcb_s *pcb)
 {
-	uint8_t* pcb_table = kAlloc_aligned(FIRST_LVL_TT_SIZE, FIRST_LVL_INDEX_WIDTH);
+	uint32_t* pcb_table = (uint32_t*) kAlloc_aligned(FIRST_LVL_TT_SIZE, FIRST_LVL_INDEX_WIDTH);
 	size_t nb_pages_code = (((uint32_t)&__kernel_heap_start__) - 1) / PAGE_SIZE + 1;	
 	pcb->page_table_addr = pcb_table;	
 
@@ -64,6 +87,19 @@ void init_pcb_table(pcb_s *pcb)
 		map_table(pcb, (uint32_t*) (cur_frame_idx * PAGE_SIZE), cur_frame_idx * PAGE_SIZE);
 	}
 
+	uint32_t stack_limit = STACK_START - NB_FRAME_STACK * PAGE_SIZE + 1;
+	uint32_t current_frame = stack_limit;
+	
+	size_t i ;
+	for(i = 0 ; i < NB_FRAME_STACK ; i++)
+	{
+		uint32_t* free_frame_addr = get_free_frame();
+		map_table(pcb, free_frame_addr, current_frame);
+		current_frame+= PAGE_SIZE;
+	}
+
+	pcb->sp = (uint32_t*) STACK_START;
+
 	page_element* free_list = (page_element*) kAlloc(sizeof(page_element));
 	free_list->address = (uint8_t*) &__kernel_heap_start__;
 	free_list->nb_pages = &__kernel_heap_end__ - &__kernel_heap_start__ + 1;
@@ -71,6 +107,19 @@ void init_pcb_table(pcb_s *pcb)
 
 	pcb->free_list = free_list;
 	pcb->occupied_list = NULL;
+
+#ifdef verifINIT
+	verify_process_table(pcb);
+#endif
+}
+
+void handle_vmem(pcb_s* pcb)
+{
+	uint32_t addr = (uint32_t) pcb->page_table_addr;
+	__asm__ volatile("mcr p15, 0, %[addr], c2, c0, 0" :: [addr]"r"(addr));
+	__asm__ volatile("mcr p15, 0, %[addr], c2, c0, 1" :: [addr]"r"(addr));
+	__asm__ volatile("MCR p15,0,R2,c8, c6,0");
+	__asm__ volatile("mcr p15, 0, %[data], c8, c7, 0" :: [data]"r"(0));
 }
 
 static void configure_mmu_c(void)
@@ -132,23 +181,22 @@ static uint32_t* get_free_frame()
 
 static void map_table(pcb_s* process, uint32_t* frame_addr, uint32_t process_addr)
 {
-	uint32_t* addr_ptr = (uint32_t*)( process->page_table_addr + 
-		process_addr/(PAGE_SIZE * SECON_LVL_TT_COUN));
-	uint8_t* second_lvl_tt;
+	uint32_t shift = process_addr >> FIRST_LVL_BITSHIFT;
+	uint32_t* addr_ptr = process->page_table_addr + shift;
+
+	uint32_t* second_lvl_tt;
 	if((*addr_ptr & 0x00000003) == 0)
 	{
-		second_lvl_tt = kAlloc_aligned(SECON_LVL_TT_SIZE,
+		second_lvl_tt = (uint32_t*) kAlloc_aligned(SECON_LVL_TT_SIZE,
 				SECON_LVL_INDEX_WIDTH);
 
 		*addr_ptr = ((uint32_t)second_lvl_tt & 0xFFFFFC00) + 1;
 	} else {
-		second_lvl_tt = (uint8_t*) (*addr_ptr & 0xFFFFFC00);
+		second_lvl_tt = (uint32_t*) (*addr_ptr & 0xFFFFFC00);
 	}
 	
-	uint32_t* frame_entry = (uint32_t*) (second_lvl_tt + 
-		(
-		 (process_addr >> 10) & 0x000003FF
-		));
+	shift = ((process_addr << 12) >> 24);
+	uint32_t* frame_entry = (uint32_t*)(second_lvl_tt) + shift;
 
 	*frame_entry = ((uint32_t) frame_addr & 0xFFFFF000 ) + 0x0000044E;
 }
@@ -310,6 +358,12 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 	} while(current_element != NULL);
 
 	return NULL; // code d'erreur à définir
+}
+
+void switch_os()
+{
+	__asm__ volatile("mcr p15, 0, %[addr], c2, c0, 0" :: [addr]"r"(mmu_base));
+	__asm__ volatile("MCR p15,0,R4,c8, c6,0");
 }
 
 // bool merge : vaut vrai lorsqu'on insère dans la free_list
@@ -520,7 +574,7 @@ static uint32_t vmem_translate(uint32_t va, struct pcb_s* process)
 	}
 	else
 	{
-		//table_base = (uint32_t) process->page_table;
+		table_base = (uint32_t) process->page_table_addr;
 	}
 	table_base = table_base & 0xFFFFC000;
 
@@ -553,6 +607,8 @@ static uint32_t vmem_translate(uint32_t va, struct pcb_s* process)
 	return pa;
 }
 
+
+
 static void verify_init() 
 {
 	uint32_t adresse;	
@@ -572,5 +628,27 @@ static void verify_init()
 	if(vmem_translate(0, NULL) != 0)
 		PANIC();
 	
+}
+
+static void verify_process_table(pcb_s* pcb)
+{
+	uint32_t adresse;	
+	for(adresse = 0 ; adresse < (uint32_t)(&__kernel_heap_start__ - 1); adresse+= 1)
+	{
+			if (vmem_translate(adresse, pcb) != adresse)
+				kernel_panic("verify_init allowed", adresse);
+	}
+
+	size_t i;
+	adresse = STACK_START - NB_FRAME_STACK * PAGE_SIZE + 1 ;
+	for ( i = 0 ; 
+		  i < NB_FRAME_STACK ;	
+		  i++ ) {
+			if (vmem_translate(adresse, pcb) == (uint32_t) FORBIDDEN_ADDRESS)
+				kernel_panic("verify_init allowed", adresse);
+			adresse += PAGE_SIZE;
+	}
+
+	//kernel_panic("OK !", 42);
 }
 #endif

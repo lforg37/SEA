@@ -1,13 +1,14 @@
-
-
 #include "syscall.h"
 #include "util.h"
 #include "asm_tools.h"
 #include "hw.h"
 #include "sched.h"
+#include "vmem.h"
+
 
 //Globals au programme
 uint32_t * g_spArg;
+extern pcb_s *g_current_process; 
 
 // **************************************** définition fonctions locales
 //Retourne l'heure du système (mode privilégié)
@@ -35,9 +36,23 @@ void do_sys_gettime()
 	g_spArg[2] = date2;
 }
 
-void do_sys_nop()
+static void do_sys_mmap()
 {
+	size_t size = g_spArg[2];
+	uint8_t* start_addr = vmem_alloc_for_userland(g_current_process, size);	
+	g_spArg[1] = (uint32_t) start_addr;
+}
+
+static void do_sys_munmap()
+{
+	size_t size = g_spArg[3];
+	uint32_t addr = g_spArg[2];
 	
+	vmem_free((uint8_t*) addr, g_current_process, size);
+}
+
+void do_sys_nop()
+{	
 }
 
 void do_sys_reboot()
@@ -80,6 +95,8 @@ void __attribute__((naked)) swi_handler(void)
 	__asm("mov %0, r0" : "=r"(action));
 	__asm("mov %0, sp" : "=r"(g_spArg));
 
+	switch_os();
+
 	switch (action)
 	{
 		case REBOOT :
@@ -103,10 +120,18 @@ void __attribute__((naked)) swi_handler(void)
 		case WAIT :
 			do_sys_wait();
 			break;
+		case MMAP :
+			do_sys_mmap();
+			break;
+		case MUMAP :
+			do_sys_munmap();
+			break;
 		default :
 			PANIC();
 			break;
 	}
+
+	handle_vmem(g_current_process);
 
 	__asm("LDMFD sp!, {r4}");	
 	__asm("MSR spsr, r4");
@@ -129,6 +154,26 @@ uint64_t sys_gettime()
 	return date_ms;
 }
 
+void* sys_mmap(size_t size)
+{
+	__asm("mov r1, %0" : : "r"(size));
+	__asm("mov r0, %0" : : "r"(MMAP));
+	__asm("SWI #0");
+
+	void* address; 
+	__asm("mov %0, r0" : "=r"(address));
+
+	return address;
+}
+
+
+void sys_munmap(void* addr, size_t size)
+{
+	__asm("mov r2, %0" : : "r"(size));
+	__asm("mov r1, %0" : : "r"(addr));
+	__asm("mov r0, %0" : : "r"(MUMAP));
+}
+
 void sys_nop()
 {
 	__asm("mov r0, %0" : : "r"(NOP): "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
@@ -141,8 +186,8 @@ void sys_reboot()
 {
 	__asm("mov r0, %0" : : "r"(REBOOT));
 	__asm("SWI #0");
-	
 }
+
 
 void sys_settime(uint64_t date_ms)
 {	
