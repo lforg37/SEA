@@ -63,10 +63,12 @@ void draw(uint8 red, uint8 green, uint8 blue);
 void drawChar(char letter, int x, int y, uint8 red, uint8 green, uint8 blue);
 void drawString(char *string, int x, int y, uint8 red, uint8 green, uint8 blue);
 
+void drawRect(unsigned int x, unsigned int y, unsigned int width, unsigned int height, uint8 red, uint8 green, uint8 blue);
+
 void drawBuffer(int x, int y, uint8 red, uint8 green, uint8 blue, int bufferFill);
 
-
 void addToBuffer(char c);
+void clear();
 void printf(char * string);
 
 #endif

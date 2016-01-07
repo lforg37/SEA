@@ -3,15 +3,16 @@
 #include "sched.h"
 #include "fb.h"
 #include "bash.h"
+#include "kb.h"
 
 
 
 void kmain( void )
 {
 	sched_init(PRIORITY);
-	FramebufferInitialize();
+	//FramebufferInitialize();
 	
-	UsbInitialise();
+	//UsbInitialise();
 	
 	create_process((func_t *)&bash_process, 3);
 	

@@ -66,6 +66,31 @@ int explode(char **pointers_out, const char *delim, const char *str, char *tmp)
 	}
 }
 
+int atoi(char *str)
+{
+    if (str == NULL)
+       return 0;
+  
+    int res = 0;
+    int sign = 1; 
+    int i = 0; 
+  
+    if (str[0] == '-')
+    {
+        sign = -1;
+        i++; 
+    }
+  
+    for (; str[i] != '\0'; ++i)
+    {
+        if (isdigit(str[i]) == 0)
+            return 0; 
+        res = res*10 + str[i] - '0';
+    }
+  
+    return sign*res;
+}
+
 
 
 char *strncpy(char *dest, const char *source, size_t n) {

@@ -246,6 +246,16 @@ void drawChar(char letter, int x, int y, uint8 red, uint8 green, uint8 blue)
 	}
 }
 
+void drawRect(unsigned int x, unsigned int y, unsigned int width, unsigned int height, uint8 red, uint8 green, uint8 blue)
+{
+	int i, j;
+	for (i = x ; i < width ; ++i)
+	{
+		for (j = y ; j < width ; ++j)
+			put_pixel_RGB24(i, j, red, green, blue);
+	}
+}
+
 void drawString(char *string, int x, int y, uint8 red, uint8 green, uint8 blue)
 {	
 	int i = 0, oldSize;
@@ -349,4 +359,11 @@ void printf(char * string)
 	{
 		addToBuffer(string[i]);
 	}
+}
+
+void clear()
+{
+	draw(0, 0, 0);
+	g_iLin = 0;
+	g_iCol = 0;
 }

@@ -92,11 +92,11 @@ int memicmp(const void *buf1, const void *buf2, size_t n);
 // Intrinsic functions
 
 void *memset(void *, int, size_t);
-
 char *strcpy(char *, const char *);
 char *strcat(char *, const char *);
 int strcmp(const char *, const char *);
 size_t strlen(const char *);
+int atoi(char *str);
 
 #ifdef  __cplusplus
 }
