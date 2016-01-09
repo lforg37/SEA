@@ -134,6 +134,7 @@ void do_sys_yieldto()
 
 pcb_s *elect()
 {
+	switch_os();
 	switch (g_current_scheduler)
 	{
 		case PRIORITY :
@@ -141,6 +142,7 @@ pcb_s *elect()
 		default :
 			return electBestPriority();
 	}
+	handle_vmem(g_current_process);
 }
 
 pcb_s *electBestPriority()
@@ -200,6 +202,7 @@ void __attribute__((naked)) irq_handler(void)
     __asm("MRS r4, spsr");
     __asm("STMFD sp!, {r4}");
     
+	switch_os();
     
 	//On vérifie si on doit réveiller des processus
 	g_dateForWaitingProcess += 10;
@@ -224,6 +227,8 @@ void __attribute__((naked)) irq_handler(void)
 	//reearmement du timer
 	set_next_tick_default();
 	ENABLE_TIMER_IRQ();
+
+	handle_vmem(g_current_process);
 
 	__asm("LDMFD sp!, {r4}");
     __asm("MSR spsr, r4");
