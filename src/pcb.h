@@ -12,7 +12,7 @@ typedef enum process_state
 typedef struct page_element
 {
 	uint8_t* address;
-	size_t nb_pages;
+	size_t size;
 	struct page_element* next;
 } page_element;
 

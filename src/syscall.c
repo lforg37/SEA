@@ -51,6 +51,26 @@ static void do_sys_munmap()
 	vmem_free((uint8_t*) addr, g_current_process, size);
 }
 
+
+// TODO : comment on fait s'il y a une erreur ?
+void do_gmalloc(size_t size)
+{
+	size_t size = g_spArg[2];
+	uint8_t* addr;
+	
+	addr = get_contiguous_addr(g_current_process, size);
+	
+	g_spArg[1] = (uint32_t) addr;
+}
+
+void do_gfree(void* ptr)
+{
+	uint32_t address = g_spArg[2];
+	uint8_t* ptr = (uint8_t*) address;
+	
+	free_addr(ptr, g_current_process);
+}
+
 void do_sys_nop()
 {	
 }
@@ -126,6 +146,12 @@ void __attribute__((naked)) swi_handler(void)
 		case MUMAP :
 			do_sys_munmap();
 			break;
+		case GFREE :
+			do_gfree();
+			break;
+		case GMALLOC :
+			do_gmalloc();
+			break;
 		default :
 			PANIC();
 			break;
@@ -172,6 +198,19 @@ void sys_munmap(void* addr, size_t size)
 	__asm("mov r2, %0" : : "r"(size));
 	__asm("mov r1, %0" : : "r"(addr));
 	__asm("mov r0, %0" : : "r"(MUMAP));
+}
+
+
+void gmalloc(size_t size)
+{
+	__asm("mov r1, %[size]" : : [size]"r"(size));
+	
+}
+
+void gfree(void* ptr)
+{
+	uint32_t address = (uint32_t) *ptr;
+	__asm("mov r1, %[address]" : : [address]"r"(address));
 }
 
 void sys_nop()

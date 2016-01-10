@@ -30,4 +30,7 @@ void handle_vmem(pcb_s* pcb);
 void switch_os(void);
 void free_all(pcb_s* process);
 
+uint8_t* get_contiguous_addr(pcb_s* process, size_t size);
+void free_addr(uint8_t* vAddress, pcb_s* process);
+
 #endif

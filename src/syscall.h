@@ -15,7 +15,9 @@ enum action
 	SYS_EXIT, 
 	WAIT,
 	MMAP,
-	MUMAP
+	MUMAP,
+	GMALLOC,
+	GFREE
 };
 
 //Handler pour les changements de mode 
@@ -29,6 +31,12 @@ void* sys_mmap(size_t size);
 
 //Détacher size nombre de page à partir de l'adresse addresse
 void sys_munmap(void* addr, size_t size);
+
+// Alloue size octets dans le tas du processus courant
+void gmalloc(size_t size);
+
+// Libère la zone mémoire du tas associée à l'adresse ptr
+void gfree(void* ptr);
 
 //Inutile
 void sys_nop();
