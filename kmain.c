@@ -5,10 +5,18 @@
 void user_process_1()
 {
 	int v1 = 5;
+	
+	uint32_t* tab = (uint32_t*)gmalloc(sizeof(uint32_t)*2);
+	
+	*tab = 255;
+	*(tab + 1) = 42;
+
 	while(1)
 	{
 		v1++;
 	}
+
+	gfree(tab);
 }
 
 void user_process_2()

@@ -199,16 +199,23 @@ void sys_munmap(void* addr, size_t size)
 }
 
 
-void gmalloc(size_t size)
+void* gmalloc(size_t size)
 {
 	__asm("mov r1, %[size]" : : [size]"r"(size));
+	__asm("SWI #0");
 	
+	void* ptr;
+
+	__asm("mov r0, %[ptr]" : [ptr]"=r"(ptr));
+
+	return ptr;	
 }
 
 void gfree(void* ptr)
 {
 	uint32_t address = (uint32_t) ptr;
 	__asm("mov r1, %[address]" : : [address]"r"(address));
+	__asm("SWI #0");
 }
 
 void sys_nop()

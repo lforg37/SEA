@@ -20,8 +20,6 @@ static void map_table(pcb_s* process, uint32_t* frame_addr, uint32_t process_add
 
 static page_list* insert_list(page_list* list, uint8_t* adress,
         uint8_t nb_pages, bool merge);
-static uint8_t* get_contiguous_addr(pcb_s* process, size_t size);
-static void free_addr(uint8_t* vAddress, pcb_s* process);
 static uint32_t* get_free_frame();
 
 #ifdef verifINIT
@@ -102,7 +100,7 @@ void init_pcb_table(pcb_s *pcb)
 
 	page_element* free_list = (page_element*) kAlloc(sizeof(page_element));
 	free_list->address = (uint8_t*) &__kernel_heap_start__;
-	free_list->nb_pages = &__kernel_heap_end__ - &__kernel_heap_start__ + 1;
+	free_list->size = &__kernel_heap_end__ - &__kernel_heap_start__ + 1;
 	free_list->next = NULL;
 
 	pcb->free_list = free_list;
