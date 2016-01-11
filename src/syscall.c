@@ -204,7 +204,7 @@ void sys_munmap(void* addr, size_t size)
 void* gmalloc(size_t size)
 {
 	__asm("mov r1, %[size]" : : [size]"r"(size));
-	__asm("mov r0, %0" : : "r"(GMALLOC);
+	__asm("mov r0, %0" : : "r"(GMALLOC));
 	
 	__asm("SWI #0");
 	

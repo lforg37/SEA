@@ -388,7 +388,7 @@ page_list* insert_list(page_list* list, uint8_t* address,
 						previous->size);
 
 					if(next_address == address) {
-						previous->size += nb_pages;
+						previous->size += block_size;
 						previous_merge = true;
 					}
 				}
