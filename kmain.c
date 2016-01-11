@@ -7,11 +7,18 @@ void user_process_1()
 	int v1 = 5;
 	
 	uint32_t* tab = (uint32_t*)gmalloc(sizeof(uint32_t)*2);
-	
+	uint32_t* tab2 = (uint32_t*)gmalloc(sizeof(uint32_t)*3);
 	*tab = 0xffffff1f;
 	*(tab + 1) = 0xffffff2f;
+
+	*tab2 = 0;
+	*(tab2 + 1) = 1;
+	*(tab2 + 2) = 2;
 	
 	gfree(tab);
+	gfree(tab2);
+
+	*tab = 0xffffff3f; /* doit generer une erreur */
 
 	while(1)
 	{

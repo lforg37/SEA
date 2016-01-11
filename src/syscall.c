@@ -60,7 +60,9 @@ void do_gmalloc()
 	addr = get_contiguous_addr(g_current_process, size);
 	// sinon, on alloue une page en plus
 	if(addr == NULL) {
-		vmem_alloc_for_userland(g_current_process, size);
+		size_t nb_pages = (size / PAGE_SIZE) + 1;
+
+		addr = get_contiguous_page(g_current_process, nb_pages);
 		
 		if(addr != NULL) {
 			addr = get_contiguous_addr(g_current_process, size);
@@ -182,8 +184,8 @@ uint64_t sys_gettime()
 	uint64_t date_ms;
 	
 	uint32_t date1, date2;
-	__asm("mov %0, r0" : "=r"(date1));
-	__asm("mov %0, r1" : "=r"(date2));
+	__asm("mov r0, %0" : "=r"(date1));
+	__asm("mov r1, %0" : "=r"(date2));
 	
 	date_ms = (uint64_t) date2 << 32 | date1;
 
@@ -221,7 +223,7 @@ void* gmalloc(size_t size)
 	
 	void* ptr;
 
-	__asm("mov r0, %[ptr]" : [ptr]"=r"(ptr));
+	__asm("mov %[ptr], r0" : [ptr]"=r"(ptr));
 
 	return ptr;	
 }

@@ -31,7 +31,9 @@ typedef struct pcb_s
 	uint64_t wakingTime;
 
 	page_element* free_list;
+	page_element* allocated_list;
 	page_element* occupied_list;
+
 	uint32_t* page_table_addr;
 } pcb_s;
 #endif
