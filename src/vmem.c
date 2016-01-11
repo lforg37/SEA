@@ -309,7 +309,7 @@ void free_addr(uint8_t* vAddress, pcb_s* process)
 	
 }
 
-// size_t size : taille en nombre de page
+// size_t size : taille en uint8_t
 uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 {
 	page_element* free_list = process->free_list;
@@ -332,8 +332,7 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 				current_element->size -= size;
 				
 				current_element->address = (uint8_t*)
-					((size * PAGE_SIZE)
-					+ (size_t) current_element->address);
+					(size + (size_t) current_element->address);
 
 			} else if (previous_element != NULL) {
 				
@@ -366,7 +365,7 @@ void switch_os()
 
 // bool merge : vaut vrai lorsqu'on insère dans la free_list
 page_list* insert_list(page_list* list, uint8_t* address,
-		uint8_t nb_pages, bool merge)
+		uint8_t block_size, bool merge)
 {
 	page_element* current = list;
 	page_element* previous = NULL;
@@ -386,7 +385,7 @@ page_list* insert_list(page_list* list, uint8_t* address,
 				if(previous != NULL) {
 					next_address =
 						(uint8_t*)((size_t) previous->address +
-						(PAGE_SIZE * previous->size));
+						previous->size);
 
 					if(next_address == address) {
 						previous->size += nb_pages;
@@ -396,13 +395,13 @@ page_list* insert_list(page_list* list, uint8_t* address,
 
 				//fusion avec le bloc d'après ?
 				next_address =
-					(uint8_t*)((size_t) address + (PAGE_SIZE * nb_pages));
+					(uint8_t*)((size_t) address + block_size);
 
 				if(next_address == current->address) {
 					if(!previous_merge) {
 						// fusion avec le bloc d'après uniquement
 						current->address = address;
-						current->size += nb_pages;
+						current->size += block_size;
 					}
 					else {
 						// fusion avec le bloc d'après et d'avant
@@ -429,7 +428,7 @@ page_list* insert_list(page_list* list, uint8_t* address,
 			
 			new_element->next = current;
 			new_element->address = address;
-			new_element->size = nb_pages;
+			new_element->size = block_size;
 
 			return list;
 		}
@@ -442,7 +441,7 @@ page_list* insert_list(page_list* list, uint8_t* address,
 		
 	last_element->next = NULL;
 	last_element->address = address;
-	last_element->size = nb_pages;
+	last_element->size = block_size;
 	
 	if(list == NULL) {
 		// la liste est vide

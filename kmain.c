@@ -8,15 +8,17 @@ void user_process_1()
 	
 	uint32_t* tab = (uint32_t*)gmalloc(sizeof(uint32_t)*2);
 	
-	*tab = 255;
-	*(tab + 1) = 42;
+	*tab = 0xffffff1f;
+	*(tab + 1) = 0xffffff2f;
+	
+	gfree(tab);
 
 	while(1)
 	{
 		v1++;
 	}
 
-	gfree(tab);
+	
 }
 
 void user_process_2()
