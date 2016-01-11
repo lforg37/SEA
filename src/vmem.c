@@ -19,7 +19,9 @@ static uint16_t idx_last_frame_allocated;
 static void map_table(pcb_s* process, uint32_t* frame_addr, uint32_t process_addr);
 
 static page_list* insert_list(page_list* list, uint8_t* adress,
-        uint8_t size, bool merge);
+        uint8_t nb_pages, bool merge);
+static uint8_t* get_contiguous_addr(pcb_s* process, size_t size);
+static void free_addr(uint8_t* vAddress, pcb_s* process);
 static uint32_t* get_free_frame();
 
 #ifdef verifINIT
@@ -100,7 +102,7 @@ void init_pcb_table(pcb_s *pcb)
 
 	page_element* free_list = (page_element*) kAlloc(sizeof(page_element));
 	free_list->address = (uint8_t*) &__kernel_heap_start__;
-	free_list->size = &__kernel_heap_end__ - &__kernel_heap_start__ + 1;
+	free_list->nb_pages = &__kernel_heap_end__ - &__kernel_heap_start__ + 1;
 	free_list->next = NULL;
 
 	pcb->free_list = free_list;
@@ -201,16 +203,16 @@ static void map_table(pcb_s* process, uint32_t* frame_addr, uint32_t process_add
 
 uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
 {
-	size_t size = size / (PAGE_SIZE * 4);
-	if (size % (4 * PAGE_SIZE) > 0) {
-		size++;
+	size_t nb_pages = size / (PAGE_SIZE * 4);
+	if (nb_pages % (4 * PAGE_SIZE) > 0) {
+		nb_pages++;
 	}
 	
-	uint8_t* page_start = get_contiguous_addr(process, size);
+	uint8_t* page_start = get_contiguous_addr(process, nb_pages);
 	uint32_t page_addr = (uint32_t) page_start;
 	size_t i;
 	uint32_t *frame;
-	for(i = 0 ; i < size ; i++)
+	for(i = 0 ; i < nb_pages ; i++)
 	{
 		frame = get_free_frame();
 		map_table(process, frame, page_addr);	
@@ -332,7 +334,8 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 				current_element->size -= size;
 				
 				current_element->address = (uint8_t*)
-					(size + (size_t) current_element->address);
+					((size * PAGE_SIZE)
+					+ (size_t) current_element->address);
 
 			} else if (previous_element != NULL) {
 				
@@ -354,7 +357,7 @@ uint8_t* get_contiguous_addr(pcb_s* process, size_t size)
 
 	} while(current_element != NULL);
 
-	return NULL;
+	return NULL; // code d'erreur à définir
 }
 
 void switch_os()
@@ -365,7 +368,7 @@ void switch_os()
 
 // bool merge : vaut vrai lorsqu'on insère dans la free_list
 page_list* insert_list(page_list* list, uint8_t* address,
-		uint8_t size, bool merge)
+		uint8_t nb_pages, bool merge)
 {
 	page_element* current = list;
 	page_element* previous = NULL;
@@ -385,23 +388,23 @@ page_list* insert_list(page_list* list, uint8_t* address,
 				if(previous != NULL) {
 					next_address =
 						(uint8_t*)((size_t) previous->address +
-						previous->size);
+						(PAGE_SIZE * previous->size));
 
 					if(next_address == address) {
-						previous->size += size;
+						previous->size += nb_pages;
 						previous_merge = true;
 					}
 				}
 
 				//fusion avec le bloc d'après ?
 				next_address =
-					(uint8_t*)((size_t) address + size));
+					(uint8_t*)((size_t) address + (PAGE_SIZE * nb_pages));
 
 				if(next_address == current->address) {
 					if(!previous_merge) {
 						// fusion avec le bloc d'après uniquement
 						current->address = address;
-						current->size += size;
+						current->size += nb_pages;
 					}
 					else {
 						// fusion avec le bloc d'après et d'avant
@@ -428,7 +431,7 @@ page_list* insert_list(page_list* list, uint8_t* address,
 			
 			new_element->next = current;
 			new_element->address = address;
-			new_element->size = size;
+			new_element->size = nb_pages;
 
 			return list;
 		}
@@ -441,7 +444,7 @@ page_list* insert_list(page_list* list, uint8_t* address,
 		
 	last_element->next = NULL;
 	last_element->address = address;
-	last_element->size = size;
+	last_element->size = nb_pages;
 	
 	if(list == NULL) {
 		// la liste est vide
