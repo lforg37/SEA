@@ -468,16 +468,21 @@ size_t strlen(const char *s) {
 }
 
 int strcmp(const char *s1, const char *s2) {
-  int ret = 0;
-  while (!(ret = *(unsigned char *) s1 - *(unsigned char *) s2) && *s2) ++s1, ++s2;
+	
+	int sizeS1 = strlen(s1);
+	int sizeS2 = strlen(s2);
+	
+	if (sizeS1 != sizeS2)
+		return -1;
+	int i;
+	
+	for (i = 0 ; i < sizeS1 ; ++i)
+	{
+		if (s1[i] != s2[i])
+			return s1[i] - s2[i];
+	}
 
-  if (ret < 0) {
-    ret = -1;
-  } else if (ret > 0) {
-    ret = 1 ;
-  }
-
-  return ret;
+  return 0;
 }
 
 char *strcat(char *dst, const char *src) {

@@ -10,7 +10,7 @@ static uint32 fb_size_bytes;
 
 static int g_iCol = 0;
 static int g_iLin = 0;
-static char g_bufferScreen[BUFFER_HEIGHT][BUFFER_WIDTH];
+static char g_bufferScreen[BUFFER_HEIGHT][BUFFER_WIDTH] = {{'\0'}};
 static uint32 fb_x,fb_y,pitch,depth;
 
 /*
@@ -193,6 +193,14 @@ int FramebufferInitialize() {
   fb_x--;
   fb_y--;
   
+  for (int i = 0 ; i < BUFFER_HEIGHT ; ++i)
+  {
+	for (int j = 0 ; j < BUFFER_WIDTH ; ++j)
+	{
+		g_bufferScreen[i][j] = ' ';
+	}
+  }
+  
   return 1;
 }
 
@@ -251,7 +259,7 @@ void drawRect(unsigned int x, unsigned int y, unsigned int width, unsigned int h
 	int i, j;
 	for (i = x ; i < width ; ++i)
 	{
-		for (j = y ; j < width ; ++j)
+		for (j = y ; j < height ; ++j)
 			put_pixel_RGB24(i, j, red, green, blue);
 	}
 }
@@ -320,6 +328,9 @@ void drawBuffer(int x, int y, uint8 red, uint8 green, uint8 blue, int bufferFill
 
 void addToBuffer(char c)
 {
+	if (c == '\0')
+		return;
+		
 	int drawAll = 0;
 	
 	if (g_iCol +1 > BUFFER_WIDTH || c == '\n')
@@ -328,28 +339,30 @@ void addToBuffer(char c)
 		g_iCol = 0;
 	}
 	
-	if (g_iLin > BUFFER_HEIGHT)
+	if (g_iLin >= BUFFER_HEIGHT)
 	{
 		int j, i;
-		for(i = 0; i < g_iLin - 1; i++)
+		g_iLin--;
+		for(i = 0; i < g_iLin; i++)
 		{
-			for(j = 0; j < g_iCol; j++)
-			{
+			for(j = 0; j < BUFFER_WIDTH; j++)
 				g_bufferScreen[i][j] = g_bufferScreen[i + 1][j];
-			}
 		}
-		
+		for(j = 0; j < BUFFER_WIDTH; j++)
+			g_bufferScreen[g_iLin][j] = ' ';
 		drawAll = 1;
 	}
-	if (c != '\n')
-	{
+	if (c == '\n' && drawAll == 0)
+		return;
+	if (c != '\n' && c != '\0')
 		g_bufferScreen[g_iLin][g_iCol] = c;
-	}
-	
+		
 	if (drawAll == 1)
-		drawBuffer(10, 10, 255, 255, 255, g_iLin);
-	else
-		drawChar(g_bufferScreen[g_iLin][g_iCol], 10 + g_iCol * 8, 10 + g_iLin * 16, 255, 255, 255);
+		drawBuffer(10, 10, 255, 255, 255, g_iLin + 1);
+	else if (c != ' ')
+		drawChar(g_bufferScreen[g_iLin][g_iCol], 10 + g_iCol * 8, 30 + g_iLin * 16, 255, 255, 255);
+		
+	g_iCol++;
 }
 
 void printf(char * string)
@@ -366,4 +379,9 @@ void clear()
 	draw(0, 0, 0);
 	g_iLin = 0;
 	g_iCol = 0;
+}
+
+void updateScreen()
+{
+	drawBuffer(10, 10, 255, 255, 255, g_iLin + 1);
 }

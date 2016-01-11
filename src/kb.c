@@ -31,4 +31,5 @@ void getString(char *buffer, int tailleBuf, char delimiter)
 		//pos += 13;
 		buffer[i] = c;
 	}
+	buffer[i - 1] = '\0';
 }

@@ -10,14 +10,14 @@
 void kmain( void )
 {
 	sched_init(PRIORITY);
-	//FramebufferInitialize();
+	FramebufferInitialize();
 	
-	//UsbInitialise();
+	UsbInitialise();
 	
 	create_process((func_t *)&bash_process, 3);
 	
 	timer_init();
-    ENABLE_IRQ();
+    	ENABLE_IRQ();
 
 	__asm("cps 0x10"); // switch CPU to USER mode		
 	

@@ -3,8 +3,8 @@
 #include <stdint.h>
 
 
-#define BUFFER_HEIGHT 10
-#define BUFFER_WIDTH 1000
+#define BUFFER_HEIGHT 24
+#define BUFFER_WIDTH 70
 /*
  * Explication des adresses, offsets, channels, etc: http://elinux.org/RPi_Framebuffer
  * Intro au framebuffer: http://magicsmoke.co.za/?p=284
@@ -70,5 +70,6 @@ void drawBuffer(int x, int y, uint8 red, uint8 green, uint8 blue, int bufferFill
 void addToBuffer(char c);
 void clear();
 void printf(char * string);
+void updateScreen();
 
 #endif
