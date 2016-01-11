@@ -37,7 +37,10 @@ void do_sys_exit();
 void do_sys_wait();
 
 //Inutile (utile pour l'ordonnanceur préemptif)
-void do_sys_yieldto();
+void do_sys_yieldto(pcb_s *ptr);
+
+//Utile
+void do_sys_yield();
 
 //Handler pour les interruptions du timer
 void __attribute__((naked)) irq_handler(void);

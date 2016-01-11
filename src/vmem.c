@@ -117,7 +117,6 @@ void handle_vmem(pcb_s* pcb)
 	__asm__ volatile("mcr p15, 0, %[addr], c2, c0, 0" :: [addr]"r"(addr));
 	__asm__ volatile("mcr p15, 0, %[addr], c2, c0, 1" :: [addr]"r"(addr));
 	__asm__ volatile("MCR p15,0,R2,c8, c6,0");
-	__asm__ volatile("mcr p15, 0, %[data], c8, c7, 0" :: [data]"r"(0));
 }
 
 static void configure_mmu_c(void)
@@ -206,7 +205,7 @@ uint8_t* vmem_alloc_for_userland(pcb_s* process, size_t size)
 		nb_pages++;
 	}
 	
-	uint8_t* page_start = get_contiguous_addr(process, nb_pages);
+	uint8_t* page_start = get_contiguous_addr(process, nb_pages * PAGE_SIZE);
 	uint32_t page_addr = (uint32_t) page_start;
 	size_t i;
 	uint32_t *frame;
