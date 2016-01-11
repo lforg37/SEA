@@ -51,9 +51,7 @@ static void do_sys_munmap()
 	vmem_free((uint8_t*) addr, g_current_process, size);
 }
 
-
-// TODO : comment on fait s'il y a une erreur ?
-void do_gmalloc(size_t size)
+void do_gmalloc()
 {
 	size_t size = g_spArg[2];
 	uint8_t* addr;
@@ -63,7 +61,7 @@ void do_gmalloc(size_t size)
 	g_spArg[1] = (uint32_t) addr;
 }
 
-void do_gfree(void* ptr)
+void do_gfree()
 {
 	uint32_t address = g_spArg[2];
 	uint8_t* ptr = (uint8_t*) address;
@@ -209,7 +207,7 @@ void gmalloc(size_t size)
 
 void gfree(void* ptr)
 {
-	uint32_t address = (uint32_t) *ptr;
+	uint32_t address = (uint32_t) ptr;
 	__asm("mov r1, %[address]" : : [address]"r"(address));
 }
 
