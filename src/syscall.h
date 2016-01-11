@@ -12,6 +12,7 @@ enum action
 	SETTIME, 
 	GETTIME, 
 	YIELDTO, 
+	YIELD, 
 	SYS_EXIT, 
 	WAIT,
 	MMAP,

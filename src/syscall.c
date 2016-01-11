@@ -112,7 +112,10 @@ void __attribute__((naked)) swi_handler(void)
 			do_sys_gettime();
 			break;
 		case YIELDTO :
-			 do_sys_yieldto();
+			 do_sys_yieldto(NULL);
+			 break;
+		case YIELD :
+			 do_sys_yield();
 			 break;
 		case SYS_EXIT :
 			do_sys_exit();
@@ -172,6 +175,7 @@ void sys_munmap(void* addr, size_t size)
 	__asm("mov r2, %0" : : "r"(size));
 	__asm("mov r1, %0" : : "r"(addr));
 	__asm("mov r0, %0" : : "r"(MUMAP));
+	__asm("SWI #0");
 }
 
 void sys_nop()
