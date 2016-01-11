@@ -4,6 +4,7 @@
 #include "sched.h"
 #include "string.h"
 
+
 void KeyboardLoop()
 {	
 	while (1)
@@ -13,6 +14,7 @@ void KeyboardLoop()
 	}
 }
 
+
 void getLine(char *buffer, int tailleBuf)
 {
 	getString(buffer, tailleBuf, '\n');
@@ -20,7 +22,8 @@ void getLine(char *buffer, int tailleBuf)
 
 void getString(char *buffer, int tailleBuf, char delimiter)
 {
-	int i, pos = 0;
+
+	int i;//, pos = 10;
 		
 	if (tailleBuf == 0) 
 		return;
@@ -32,9 +35,12 @@ void getString(char *buffer, int tailleBuf, char delimiter)
 		c = 0;
 		while (c == 0)
 		{
-			KeyboardUpdate();
-			addToBuffer(c);
+			c = KeyboardGetChar();	
 		}
+		addToBuffer(c);
+		//drawChar(c, pos, 200, 255, 255, 0);
+		//pos += 13;
 		buffer[i] = c;
 	}
+	buffer[i - 1] = '\0';
 }

@@ -66,6 +66,30 @@ int explode(char **pointers_out, const char *delim, const char *str, char *tmp)
 	}
 }
 
+int atoi(char *str)
+{
+    if (str == NULL)
+       return 0;
+  
+    int res = 0;
+    int sign = 1; 
+    int i = 0; 
+  
+    if (str[0] == '-')
+    {
+        sign = -1;
+        i++; 
+    }
+  
+    for (; str[i] != '\0'; ++i)
+    {
+        if (isdigit(str[i]) == 0)
+            return 0; 
+        res = res*10 + str[i] - '0';
+    }
+  
+    return sign*res;
+}
 
 
 char *strncpy(char *dest, const char *source, size_t n) {
@@ -443,16 +467,20 @@ size_t strlen(const char *s) {
 }
 
 int strcmp(const char *s1, const char *s2) {
-  int ret = 0;
-  while (!(ret = *(unsigned char *) s1 - *(unsigned char *) s2) && *s2) ++s1, ++s2;
+	int sizeS1 = strlen(s1);
+	int sizeS2 = strlen(s2);
+	
+	if (sizeS1 != sizeS2)
+		return -1;
+	int i;
+	
+	for (i = 0 ; i < sizeS1 ; ++i)
+	{
+		if (s1[i] != s2[i])
+			return s1[i] - s2[i];
+	}
 
-  if (ret < 0) {
-    ret = -1;
-  } else if (ret > 0) {
-    ret = 1 ;
-  }
-
-  return ret;
+  return 0;
 }
 
 char *strcat(char *dst, const char *src) {

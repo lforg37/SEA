@@ -98,6 +98,8 @@ char *strcat(char *, const char *);
 int strcmp(const char *, const char *);
 size_t strlen(const char *);
 
+int atoi(char *str);
+
 #ifdef  __cplusplus
 }
 #endif
