@@ -59,7 +59,7 @@ void do_sys_exit()
 	g_current_process->state = TERMINATED;
 	g_spArg[2] = (uint32_t)elect();
 
-	do_sys_yieldto();
+	do_sys_yieldto(NULL);
 
 	int terminateKernel = 0;
 	if (g_ready_processes == NULL)//Si on supprime le dernier processus...
@@ -90,9 +90,18 @@ void do_sys_wait()
 	insertInList(&g_waiting_processes, g_current_process, 0);
 }
 
-void do_sys_yieldto()
+void do_sys_yield()
 {
-	pcb_s * dest = (pcb_s*)g_spArg[2];
+	do_sys_yieldto(elect());
+}
+
+void do_sys_yieldto(pcb_s* ptr)
+{
+	pcb_s * dest;
+	if(ptr == NULL)
+		dest = (pcb_s*)g_spArg[2];
+	else
+		dest = ptr;
 	
 	if (dest == g_current_process)
 		return;
@@ -134,7 +143,6 @@ void do_sys_yieldto()
 
 pcb_s *elect()
 {
-	switch_os();
 	switch (g_current_scheduler)
 	{
 		case PRIORITY :
@@ -142,7 +150,6 @@ pcb_s *elect()
 		default :
 			return electBestPriority();
 	}
-	handle_vmem(g_current_process);
 }
 
 pcb_s *electBestPriority()
@@ -221,7 +228,7 @@ void __attribute__((naked)) irq_handler(void)
 	
 	//Changement de contexte
 	__asm("cps 0x13");
-	do_sys_yieldto();
+	do_sys_yieldto(NULL);
 	__asm("cps 0x12");
 	
 	//reearmement du timer
@@ -311,7 +318,8 @@ void sys_wait(uint32_t miliseconds)
 
 void sys_yield()
 {
-	sys_yieldto(elect());
+	__asm("mov r0, %0" : : "r"(YIELD));
+	__asm("SWI #0");
 }
 
 void sys_yieldto(pcb_s * dest)
