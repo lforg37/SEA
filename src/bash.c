@@ -24,7 +24,7 @@ void bash_process()
 	char buffer[BUFFER_CMD];
 	while (1)
 	{
-		printf("\n");
+		printf("\n$ ");
 		getLine(buffer, BUFFER_CMD);
 	
 		char item_bytes[BUFFER_CMD];
